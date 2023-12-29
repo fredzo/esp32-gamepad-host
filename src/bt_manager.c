@@ -22,6 +22,7 @@ extern void btstack_init();
 
 #define CLASS_OF_DEVICE_GAMEPAD_START  0x002500
 #define CLASS_OF_DEVICE_GAMEPAD_END    0x0025FF
+#define CLASS_OF_DEVICE_WIIMOTE        0x002504
 
 
 
@@ -56,11 +57,12 @@ static enum {
 ////////////////// Gap Inquiry
 
 #define MAX_DEVICES 20
-enum DEVICE_STATE { REMOTE_NAME_REQUEST, REMOTE_NAME_INQUIRED, REMOTE_NAME_FETCHED };
+enum DEVICE_STATE { CONNECTION_REQUESTED, CONNECTING, CONNECTED };
 struct device {
     bd_addr_t          address;
     uint8_t            pageScanRepetitionMode;
     uint16_t           clockOffset;
+    uint32_t           classOfDevice;
     enum DEVICE_STATE  state; 
 };
 
@@ -86,33 +88,8 @@ static void start_scan(void){
     }
 }
 
-static int has_more_remote_name_requests(void){
-    int i;
-    for (i=0;i<deviceCount;i++) {
-        if (devices[i].state == REMOTE_NAME_REQUEST) return 1;
-    }
-    return 0;
-}
-
-static void do_next_remote_name_request(void){
-    int i;
-    for (i=0;i<deviceCount;i++) {
-        // remote name request
-        if (devices[i].state == REMOTE_NAME_REQUEST){
-            devices[i].state = REMOTE_NAME_INQUIRED;
-            printf("Get remote name of %s...\n", bd_addr_to_str(devices[i].address));
-            gap_remote_name_request( devices[i].address, devices[i].pageScanRepetitionMode,  devices[i].clockOffset | 0x8000);
-            return;
-        }
-    }
-}
-
-static void continue_remote_names(void){
-    /*if (has_more_remote_name_requests()){
-        do_next_remote_name_request();
-        return;
-    }
-    start_scan(); */
+static void restart_scan(void){
+    start_scan();
 }
 
 //////////////////
@@ -139,7 +116,7 @@ static void hid_host_setup(void)
     // Allow sniff mode requests by HID device and support role switch
     gap_set_default_link_policy_settings(LM_LINK_POLICY_ENABLE_SNIFF_MODE | LM_LINK_POLICY_ENABLE_ROLE_SWITCH);
     // For wiimote
-    //gap_set_security_level(LEVEL_0);
+    gap_set_security_level(LEVEL_0);
 
     //gap_set_security_mode(GAP_SECURITY_MODE_2);
     //gap_ssp_set_enable(false);
@@ -353,6 +330,41 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
     }
 }
 
+static void do_connection_requests(void){
+    int i;
+    for (i=0;i<deviceCount;i++) {
+        // remote name request
+        if (devices[i].state == CONNECTION_REQUESTED){
+            devices[i].state = CONNECTING;
+            // Connect to device
+            printf("Connect to device.\n");
+            if(devices[i].classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
+            {   // For wiimote
+                printf("Setting security level to 0 for wiimote.\n");
+                gap_set_security_level(LEVEL_0);  
+            }
+            else
+            {   // Default level is 2
+                gap_set_security_level(LEVEL_2);  
+            }
+
+            //status = hid_host_connect(event_addr, hid_host_report_mode, &hid_host_cid);
+            printf("Start SDP HID query for remote HID Device with address=%s.\n",
+            bd_addr_to_str(devices[i].address));
+            //list_link_keys();
+            uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, devices[i].address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
+            if (status == ERROR_CODE_SUCCESS) {
+                app_state = APP_CONNECTING;
+            } else {
+                printf("Host connection failed, status 0x%02x\n", status);
+            }
+            return;
+        }
+    }
+}
+
+
+
 /*
  * @section Packet Handler
  * 
@@ -405,58 +417,53 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     case GAP_EVENT_INQUIRY_RESULT:
                         if (deviceCount >= MAX_DEVICES) break;  // already full
                         gap_event_inquiry_result_get_bd_addr(packet, event_addr);
+
                         index = getDeviceIndexForAddress(event_addr);
                         if (index >= 0) break;   // already in our list
 
-                        memcpy(devices[deviceCount].address, event_addr, 6);
-                        devices[deviceCount].pageScanRepetitionMode = gap_event_inquiry_result_get_page_scan_repetition_mode(packet);
-                        devices[deviceCount].clockOffset = gap_event_inquiry_result_get_clock_offset(packet);
-                        // print info
                         classOfDevice = gap_event_inquiry_result_get_class_of_device(packet);
-                        printf("Device found: %s ",  bd_addr_to_str(event_addr));
-                        printf("with COD: 0x%06x, ", (unsigned int) classOfDevice);
-                        printf("pageScan %d, ",      devices[deviceCount].pageScanRepetitionMode);
-                        printf("clock offset 0x%04x",devices[deviceCount].clockOffset);
-                        if (gap_event_inquiry_result_get_rssi_available(packet)){
-                            printf(", rssi %d dBm", (int8_t) gap_event_inquiry_result_get_rssi(packet));
-                        }
-                        if (gap_event_inquiry_result_get_name_available(packet)){
-                            char name_buffer[240];
-                            int name_len = gap_event_inquiry_result_get_name_len(packet);
-                            memcpy(name_buffer, gap_event_inquiry_result_get_name(packet), name_len);
-                            name_buffer[name_len] = 0;
-                            printf(", name '%s'", name_buffer);
-                            devices[deviceCount].state = REMOTE_NAME_FETCHED;;
-                        } else {
-                            devices[deviceCount].state = REMOTE_NAME_REQUEST;
-                        }
-                        printf("\n");
-                        deviceCount++;
                         if(classOfDevice >= CLASS_OF_DEVICE_GAMEPAD_START && classOfDevice <= CLASS_OF_DEVICE_GAMEPAD_END)
-                        {
-                            // Connect to device
-                            printf("Connect to device.\n");
+                        {   // Filter on gampads
+                            memcpy(devices[deviceCount].address, event_addr, 6);
+                            devices[deviceCount].pageScanRepetitionMode = gap_event_inquiry_result_get_page_scan_repetition_mode(packet);
+                            devices[deviceCount].clockOffset = gap_event_inquiry_result_get_clock_offset(packet);
+                            devices[deviceCount].classOfDevice = classOfDevice;
+                            devices[deviceCount].state = CONNECTION_REQUESTED;
 
-                            //status = hid_host_connect(event_addr, hid_host_report_mode, &hid_host_cid);
-                            printf("Start SDP HID query for remote HID Device with address=%s.\n",
-                            bd_addr_to_str(event_addr));
-                            list_link_keys();
-                            status = sdp_client_query_uuid16(&handle_sdp_client_query_result, event_addr, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
-                            if (status == ERROR_CODE_SUCCESS) {
-                                app_state = APP_CONNECTING;
-                            } else {
-                                printf("Host connection failed, status 0x%02x\n", status);
+                            // print info
+                            printf("Device found: %s ",  bd_addr_to_str(event_addr));
+                            printf("with COD: 0x%06x, ", (unsigned int) classOfDevice);
+                            printf("pageScan %d, ",      devices[deviceCount].pageScanRepetitionMode);
+                            printf("clock offset 0x%04x",devices[deviceCount].clockOffset);
+                            if (gap_event_inquiry_result_get_rssi_available(packet)){
+                                printf(", rssi %d dBm", (int8_t) gap_event_inquiry_result_get_rssi(packet));
+                            }
+                            if (gap_event_inquiry_result_get_name_available(packet)){
+                                char name_buffer[240];
+                                int name_len = gap_event_inquiry_result_get_name_len(packet);
+                                memcpy(name_buffer, gap_event_inquiry_result_get_name(packet), name_len);
+                                name_buffer[name_len] = 0;
+                                printf(", name '%s'", name_buffer);
+                            }
+                            printf("\n");
+                            deviceCount++;
+                            if(classOfDevice != CLASS_OF_DEVICE_WIIMOTE)
+                            {   // Wiimote needs to wait until the inquiry connection is closed
+                                do_connection_requests();
                             }
                         }
                         break;
 
+                    case HCI_EVENT_INQUIRY_RESULT:
+                        // Wait for inquiry connection to close before we start connection requests 
+                        // (to prevent device from rejecting connection for 'too much connections')
+                        do_connection_requests();
+                        break;
+
                     case GAP_EVENT_INQUIRY_COMPLETE:
-                        for (i=0;i<deviceCount;i++) {
-                            // retry remote name request
-                            if (devices[i].state == REMOTE_NAME_INQUIRED)
-                                devices[i].state = REMOTE_NAME_REQUEST;
-                        }
-                        continue_remote_names();
+                        printf("Gap inquiry complete ! Starting a new scan...\n");
+                        //do_connection_requests();
+                        restart_scan();
                         break;
 
                     case HCI_EVENT_REMOTE_NAME_REQUEST_COMPLETE:
@@ -465,12 +472,10 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         if (index >= 0) {
                             if (packet[2] == 0) {
                                 printf("Name: '%s'\n", &packet[9]);
-                                devices[index].state = REMOTE_NAME_FETCHED;
                             } else {
                                 printf("Failed to get name: page timeout\n");
                             }
                         }
-                        continue_remote_names();
                         break;
 
                     /* LISTING_PAUSE */
@@ -491,15 +496,13 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     /* @text When BTSTACK_EVENT_STATE with state HCI_STATE_WORKING
                     * is received and the example is started in client mode, the remote SDP HID query is started.
                     */
-                    /*case BTSTACK_EVENT_STATE:
+                    case BTSTACK_EVENT_STATE:
                         if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING)
                         {
-                            printf("Start SDP HID query for remote HID Device with address=%s.\n",
-                            bd_addr_to_str(remote_addr));
-                            list_link_keys();
-                            sdp_client_query_uuid16(&handle_sdp_client_query_result, remote_addr, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
+                            printf("HCI State working, connecting to devices...\n");
+                            do_connection_requests();
                         }
-                        break;*/
+                        break;
 
                     case HCI_EVENT_USER_CONFIRMATION_REQUEST:
                         // inform about user confirmation request
@@ -626,8 +629,8 @@ void maybeRumble()
 
 /*************************************************************************************************/
 //static const char remote_addr_string[] = "1F-97-19-05-06-07";
-static const char remote_addr_string[] = "15-97-19-05-06-07";
-//static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
+//static const char remote_addr_string[] = "15-97-19-05-06-07";
+static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
 
 int btstack_main(int argc, const char * argv[])
 {
