@@ -28,15 +28,11 @@ extern void btstack_init();
 
 /*************************************************************************************************/
 
-static bd_addr_t remote_addr;
+//static bd_addr_t remote_addr;
 
 static uint16_t           l2cap_hid_control_cid;
 static uint16_t           l2cap_hid_interrupt_cid;
 static btstack_packet_callback_registration_t hci_event_callback_registration;
-
-static uint16_t hid_host_cid = 0;
-static bool     hid_host_descriptor_available = false;
-static hid_protocol_mode_t hid_host_report_mode = HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT;
 
 /*************************************************************************************************/
 
@@ -115,11 +111,6 @@ static void hid_host_setup(void)
 
     // Allow sniff mode requests by HID device and support role switch
     gap_set_default_link_policy_settings(LM_LINK_POLICY_ENABLE_SNIFF_MODE | LM_LINK_POLICY_ENABLE_ROLE_SWITCH);
-    // For wiimote
-    gap_set_security_level(LEVEL_0);
-
-    //gap_set_security_mode(GAP_SECURITY_MODE_2);
-    //gap_ssp_set_enable(false);
 
     // try to become master on incoming connections
     hci_set_master_slave_policy(HCI_ROLE_MASTER);
@@ -184,8 +175,9 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
     switch (hci_event_packet_get_type(packet))
     {
         case SDP_EVENT_QUERY_COMPLETE:
-                status = l2cap_create_channel(packet_handler, remote_addr, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &l2cap_hid_control_cid);
-                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel 0x%02x\n", status);
+                // TODO : handle remote adress correctly
+                status = l2cap_create_channel(packet_handler, devices[0].address, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &l2cap_hid_control_cid);
+                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel for channel  0x%04x : status 0x%02x\n", channel, status);
                 if (status){
                     printf("Connecting to HID Control failed: 0x%02x\n", status);
                 }
@@ -348,7 +340,6 @@ static void do_connection_requests(void){
                 gap_set_security_level(LEVEL_2);  
             }
 
-            //status = hid_host_connect(event_addr, hid_host_report_mode, &hid_host_cid);
             printf("Start SDP HID query for remote HID Device with address=%s.\n",
             bd_addr_to_str(devices[i].address));
             //list_link_keys();
@@ -447,22 +438,12 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                             }
                             printf("\n");
                             deviceCount++;
-                            if(classOfDevice != CLASS_OF_DEVICE_WIIMOTE)
-                            {   // Wiimote needs to wait until the inquiry connection is closed
-                                do_connection_requests();
-                            }
+                            do_connection_requests();
                         }
-                        break;
-
-                    case HCI_EVENT_INQUIRY_RESULT:
-                        // Wait for inquiry connection to close before we start connection requests 
-                        // (to prevent device from rejecting connection for 'too much connections')
-                        do_connection_requests();
                         break;
 
                     case GAP_EVENT_INQUIRY_COMPLETE:
                         printf("Gap inquiry complete ! Starting a new scan...\n");
-                        //do_connection_requests();
                         restart_scan();
                         break;
 
@@ -499,8 +480,11 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     case BTSTACK_EVENT_STATE:
                         if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING)
                         {
-                            printf("HCI State working, connecting to devices...\n");
-                            do_connection_requests();
+                            /*printf("[EVENT STATE] Start SDP HID query for remote HID Device with address=%s.\n",
+                            bd_addr_to_str(remote_addr));
+                            list_link_keys();
+                            sdp_client_query_uuid16(&handle_sdp_client_query_result, remote_addr, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
+                            */
                         }
                         break;
 
@@ -629,8 +613,8 @@ void maybeRumble()
 
 /*************************************************************************************************/
 //static const char remote_addr_string[] = "1F-97-19-05-06-07";
-//static const char remote_addr_string[] = "15-97-19-05-06-07";
-static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
+static const char remote_addr_string[] = "15-97-19-05-06-07";
+//static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
 
 int btstack_main(int argc, const char * argv[])
 {
@@ -644,7 +628,7 @@ int btstack_main(int argc, const char * argv[])
     hid_host_setup();
 
     // Parse human readable Bluetooth address
-    sscanf_bd_addr(remote_addr_string, remote_addr);
+    //sscanf_bd_addr(remote_addr_string, remote_addr);
 
     // Turn on the device 
     hci_power_control(HCI_POWER_ON);
