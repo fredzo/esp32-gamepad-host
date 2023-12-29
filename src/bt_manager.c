@@ -182,7 +182,7 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
                     return;
                 }
                 status = l2cap_create_channel(packet_handler, devices[currentConnectingDevice].address, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &(devices[currentConnectingDevice].l2capHidControlCid));
-                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel with device index %d for channel  0x%04x and address %s : status 0x%02x\n",currentConnectingDevice, channel, bd_addr_to_str(devices[currentConnectingDevice].address), status);
+                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel with device index %d for cid  0x%04x and address %s : status 0x%02x\n",currentConnectingDevice, devices[currentConnectingDevice].l2capHidControlCid, bd_addr_to_str(devices[currentConnectingDevice].address), status);
                 if (status){
                     printf("Connecting to HID Control failed: 0x%02x\n", status);
                 }
