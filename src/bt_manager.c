@@ -182,7 +182,7 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
                     return;
                 }
                 status = l2cap_create_channel(packet_handler, devices[currentConnectingDevice].address, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &(devices[currentConnectingDevice].l2capHidControlCid));
-                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel for channel  0x%04x : status 0x%02x\n", channel, status);
+                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel with device index %d for channel  0x%04x and address %s : status 0x%02x\n",currentConnectingDevice, channel, bd_addr_to_str(devices[currentConnectingDevice].address), status);
                 if (status){
                     printf("Connecting to HID Control failed: 0x%02x\n", status);
                 }
@@ -227,7 +227,8 @@ static void do_connection_requests(void){
         if (devices[i].state == CONNECTION_REQUESTED){
             devices[i].state = CONNECTING;
             // Connect to device
-            printf("Connect to device.\n");
+            currentConnectingDevice = i;
+            printf("Connect to device for index %d.\n",currentConnectingDevice);
             if(devices[i].classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
             {   // For wiimote
                 printf("Setting security level to 0 for wiimote.\n");
@@ -242,7 +243,6 @@ static void do_connection_requests(void){
             bd_addr_to_str(devices[i].address));
             //list_link_keys();
             uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, devices[i].address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
-            currentConnectingDevice = i;
             if (status == ERROR_CODE_SUCCESS) {
                 app_state = APP_CONNECTING;
             } else {
