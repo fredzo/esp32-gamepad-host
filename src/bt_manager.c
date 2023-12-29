@@ -33,7 +33,6 @@ static uint16_t           l2cap_hid_control_cid;
 static uint16_t           l2cap_hid_interrupt_cid;
 static btstack_packet_callback_registration_t hci_event_callback_registration;
 
-
 static uint16_t hid_host_cid = 0;
 static bool     hid_host_descriptor_available = false;
 static hid_protocol_mode_t hid_host_report_mode = HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT;
@@ -55,7 +54,6 @@ static enum {
 } app_state = APP_INIT;
 
 ////////////////// Gap Inquiry
-
 
 #define MAX_DEVICES 20
 enum DEVICE_STATE { REMOTE_NAME_REQUEST, REMOTE_NAME_INQUIRED, REMOTE_NAME_FETCHED };
@@ -110,11 +108,11 @@ static void do_next_remote_name_request(void){
 }
 
 static void continue_remote_names(void){
-    if (has_more_remote_name_requests()){
+    /*if (has_more_remote_name_requests()){
         do_next_remote_name_request();
         return;
     }
-    start_scan();
+    start_scan(); */
 }
 
 //////////////////
@@ -440,7 +438,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                             printf("Connect to device.\n");
 
                             //status = hid_host_connect(event_addr, hid_host_report_mode, &hid_host_cid);
-                            printf("Start SDP HID query for remote HID Device.\n");
+                            printf("Start SDP HID query for remote HID Device with address=%s.\n",
+                            bd_addr_to_str(event_addr));
                             list_link_keys();
                             status = sdp_client_query_uuid16(&handle_sdp_client_query_result, event_addr, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
                             if (status == ERROR_CODE_SUCCESS) {
@@ -495,7 +494,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     /*case BTSTACK_EVENT_STATE:
                         if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING)
                         {
-                            printf("Start SDP HID query for remote HID Device.\n");
+                            printf("Start SDP HID query for remote HID Device with address=%s.\n",
+                            bd_addr_to_str(remote_addr));
                             list_link_keys();
                             sdp_client_query_uuid16(&handle_sdp_client_query_result, remote_addr, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
                         }
@@ -579,7 +579,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
     /*                //printf("HID interrupt: ");
                     //debug_hexdump(packet, size);
                     gamepad_handler(packet, size);*/
-                    if(size < 32 && (memcmp(last_packet,packet,size)!=0))
+                    if(size < 128 && (memcmp(last_packet,packet,size)!=0))
                     {
                         //printf("Mecmp = %d.\n",memcmp(last_packet,report,packetSize));
                         //printf_hexdump(last_packet,packetSize);
@@ -626,7 +626,7 @@ void maybeRumble()
 
 /*************************************************************************************************/
 //static const char remote_addr_string[] = "1F-97-19-05-06-07";
-//static const char remote_addr_string[] = "15-97-19-05-06-07";
+static const char remote_addr_string[] = "15-97-19-05-06-07";
 //static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
 
 int btstack_main(int argc, const char * argv[])
@@ -641,7 +641,7 @@ int btstack_main(int argc, const char * argv[])
     hid_host_setup();
 
     // Parse human readable Bluetooth address
-    //sscanf_bd_addr(remote_addr_string, remote_addr);
+    sscanf_bd_addr(remote_addr_string, remote_addr);
 
     // Turn on the device 
     hci_power_control(HCI_POWER_ON);
