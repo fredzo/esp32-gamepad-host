@@ -503,35 +503,45 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         gap_event_inquiry_result_get_bd_addr(packet, event_addr);
 
                         deviceIndex = getDeviceIndexForAddress(event_addr);
-                        if (deviceIndex >= 0) break;   // already in our list
-
-                        classOfDevice = gap_event_inquiry_result_get_class_of_device(packet);
-                        if(classOfDevice >= CLASS_OF_DEVICE_GAMEPAD_START && classOfDevice <= CLASS_OF_DEVICE_GAMEPAD_END)
-                        {   // Filter on gamepads
-                            deviceIndex = addDevice(event_addr, 
-                            gap_event_inquiry_result_get_page_scan_repetition_mode(packet),
-                            gap_event_inquiry_result_get_clock_offset(packet),
-                            classOfDevice,
-                            CONNECTION_REQUESTED);
-
-                            // print info
-                            printf("Device found: %s ",  bd_addr_to_str(event_addr));
-                            printf("with COD: 0x%06x, ", (unsigned int) classOfDevice);
-                            printf("pageScan %d, ",      devices[deviceIndex].pageScanRepetitionMode);
-                            printf("clock offset 0x%04x",devices[deviceIndex].clockOffset);
-                            if (gap_event_inquiry_result_get_rssi_available(packet)){
-                                printf(", rssi %d dBm", (int8_t) gap_event_inquiry_result_get_rssi(packet));
+                        if (deviceIndex >= 0)
+                        {   // already in our list
+                            if(devices[deviceIndex].state != CONNECTED)
+                            {   // Ask for reconnection
+                                devices[deviceIndex].state = CONNECTION_REQUESTED;
+                                do_connection_requests();
                             }
-                            if (gap_event_inquiry_result_get_name_available(packet)){
-                                char name_buffer[240];
-                                int name_len = gap_event_inquiry_result_get_name_len(packet);
-                                memcpy(name_buffer, gap_event_inquiry_result_get_name(packet), name_len);
-                                name_buffer[name_len] = 0;
-                                printf(", name '%s'", name_buffer);
-                            }
-                            printf("\n");
-                            do_connection_requests();
                         }
+                        else
+                        {
+                            classOfDevice = gap_event_inquiry_result_get_class_of_device(packet);
+                            if(classOfDevice >= CLASS_OF_DEVICE_GAMEPAD_START && classOfDevice <= CLASS_OF_DEVICE_GAMEPAD_END)
+                            {   // Filter on gamepads
+                                deviceIndex = addDevice(event_addr, 
+                                gap_event_inquiry_result_get_page_scan_repetition_mode(packet),
+                                gap_event_inquiry_result_get_clock_offset(packet),
+                                classOfDevice,
+                                CONNECTION_REQUESTED);
+
+                                // print info
+                                printf("Device found: %s ",  bd_addr_to_str(event_addr));
+                                printf("with COD: 0x%06x, ", (unsigned int) classOfDevice);
+                                printf("pageScan %d, ",      devices[deviceIndex].pageScanRepetitionMode);
+                                printf("clock offset 0x%04x",devices[deviceIndex].clockOffset);
+                                if (gap_event_inquiry_result_get_rssi_available(packet)){
+                                    printf(", rssi %d dBm", (int8_t) gap_event_inquiry_result_get_rssi(packet));
+                                }
+                                if (gap_event_inquiry_result_get_name_available(packet)){
+                                    char name_buffer[240];
+                                    int name_len = gap_event_inquiry_result_get_name_len(packet);
+                                    memcpy(name_buffer, gap_event_inquiry_result_get_name(packet), name_len);
+                                    name_buffer[name_len] = 0;
+                                    printf(", name '%s'", name_buffer);
+                                }
+                                printf("\n");
+                                do_connection_requests();
+                            }
+                        }   
+
                         break;
 
                     case GAP_EVENT_INQUIRY_COMPLETE:
