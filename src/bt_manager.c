@@ -15,7 +15,6 @@ extern void btstack_init();
 
 /*************************************************************************************************/
 
-#define ENABLE_LOG_DEBUG
 #define L2CAP_CHANNEL_MTU 128
 
 #define MAX_ATTRIBUTE_VALUE_SIZE 300
@@ -51,7 +50,7 @@ static enum {
 ////////////////// Gap Inquiry
 
 #define MAX_DEVICES 20
-enum DEVICE_STATE { CONNECTION_REQUESTED, CONNECTING, CONNECTED };
+enum DEVICE_STATE { CONNECTION_REQUESTED, CONNECTING, CONNECTED, DISCONNECTED };
 struct device {
     bd_addr_t          address;
     uint8_t            pageScanRepetitionMode;
@@ -59,6 +58,12 @@ struct device {
     uint32_t           classOfDevice;
     uint16_t           l2capHidControlCid;
     uint16_t           l2capHidInterruptCid;
+    // Four output reports
+    uint8_t            reportId;
+    const uint8_t *    report;
+    uint16_t           reportLength;
+
+    // State
     enum DEVICE_STATE  state; 
 };
 
@@ -72,6 +77,19 @@ static int getDeviceIndexForAddress( bd_addr_t addr){
     for (j=0; j< deviceCount; j++){
         if (bd_addr_cmp(addr, devices[j].address) == 0){
             return j;
+        }
+    }
+    return -1;
+}
+
+static int getDeviceIndexForChannel(uint16_t channel){
+    int j;
+    if(channel > 0)
+    {
+        for (j=0; j< deviceCount; j++){
+            if (devices[j].l2capHidControlCid == channel || devices[j].l2capHidInterruptCid == channel){
+                return j;
+            }
         }
     }
     return -1;
@@ -313,6 +331,12 @@ static void on_l2cap_channel_closed(uint16_t channel, uint8_t* packet, int16_t s
 
     local_cid = l2cap_event_channel_closed_get_local_cid(packet);
     printf("L2CAP_EVENT_CHANNEL_CLOSED: 0x%04x (channel=0x%04x)\n", local_cid, channel);
+    int deviceIndex = getDeviceIndexForChannel(channel);
+    if(deviceIndex >= 0)
+    {
+        printf("Device with index %d disconnected.\n", deviceIndex);
+        devices[deviceIndex].state = DISCONNECTED;
+    }
 }
 
 static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t size)
@@ -388,6 +412,7 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
             printf("L2CAP interrupt channel open for deviceIndex %d, connection complete.\n",currentConnectingDevice);
             devices[currentConnectingDevice].l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
             // Connection successfull
+            devices[currentConnectingDevice].state = CONNECTED;
             currentConnectingDevice = -1;
             // Check for other connections
             do_connection_requests();
@@ -410,7 +435,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
     bd_addr_t event_addr;
     uint8_t   status;
 
-    int index;
     int deviceIndex;
 
     uint32_t classOfDevice;
@@ -448,8 +472,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         if (deviceCount >= MAX_DEVICES) break;  // already full
                         gap_event_inquiry_result_get_bd_addr(packet, event_addr);
 
-                        index = getDeviceIndexForAddress(event_addr);
-                        if (index >= 0) break;   // already in our list
+                        deviceIndex = getDeviceIndexForAddress(event_addr);
+                        if (deviceIndex >= 0) break;   // already in our list
 
                         classOfDevice = gap_event_inquiry_result_get_class_of_device(packet);
                         if(classOfDevice >= CLASS_OF_DEVICE_GAMEPAD_START && classOfDevice <= CLASS_OF_DEVICE_GAMEPAD_END)
@@ -487,8 +511,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 
                     case HCI_EVENT_REMOTE_NAME_REQUEST_COMPLETE:
                         reverse_bd_addr(&packet[3], event_addr);
-                        index = getDeviceIndexForAddress(event_addr);
-                        if (index >= 0) {
+                        deviceIndex = getDeviceIndexForAddress(event_addr);
+                        if (deviceIndex >= 0) {
                             if (packet[2] == 0) {
                                 printf("Name: '%s'\n", &packet[9]);
                             } else {
@@ -502,13 +526,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         // inform about pin code request
                         printf("Pin code request - using '0000'\n");
                         hci_event_pin_code_request_get_bd_addr(packet, event_addr);
-                        /*pin[0] = event_addr[5];
-                        pin[1] = event_addr[4];
-                        pin[2] = event_addr[3];
-                        pin[3] = event_addr[2];
-                        pin[4] = event_addr[1];
-                        pin[5] = event_addr[0];
-                        gap_pin_code_response_binary(event_addr, pin, 6);*/
                         gap_pin_code_response(event_addr, "0000");
                         break;
 
@@ -590,6 +607,26 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     case L2CAP_EVENT_CHANNEL_OPENED: 
                         on_l2cap_channel_opened(channel, packet, size);
                         break;
+                    case L2CAP_EVENT_CAN_SEND_NOW:
+                        deviceIndex = getDeviceIndexForChannel(channel);
+                        if(deviceIndex < 0)
+                        {
+                            printf("ERROR : Received can send event for channel 0x%04x : no device found.\n",channel);
+                        }
+                        if(devices[deviceIndex].reportLength <= 0)
+                        {
+                            printf("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
+                        }
+                        printf("Sending output report of length %d for device index %d.\n",devices[deviceIndex].reportLength,deviceIndex);
+                        uint8_t header = (HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT;
+                        l2cap_reserve_packet_buffer();
+                        uint8_t * out_buffer = l2cap_get_outgoing_buffer();
+                        out_buffer[0] = header;
+                        out_buffer[1] = devices[deviceIndex].reportId;
+                        (void)memcpy(out_buffer + 2, devices[deviceIndex].report, devices[deviceIndex].reportLength);
+                        l2cap_send_prepared(devices[deviceIndex].l2capHidInterruptCid, devices[deviceIndex].reportLength + 2);
+                        devices[deviceIndex].reportLength = 0;
+                        break;
 
                     default:
                         break;
@@ -610,6 +647,13 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         //printf_hexdump(last_packet,packetSize);
                         memcpy(last_packet,packet,size);
                         printf_hexdump(packet,size);
+                        if(packet[7]>=0x20)
+                        {
+                            printf("Will Rumble.\n");
+                            rumbleBtChanel = channel;
+                            shouldRumble = true;
+                        }
+
                     }
 
                 }
@@ -625,6 +669,29 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                 //printf("default: 0x%02x\n", hci_event_packet_get_type(packet));
                 break;
         }
+    }
+}
+
+
+void sendOutputReport(int deviceIndex, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
+{
+    if(deviceIndex < 0 || deviceIndex >= deviceCount)
+    {
+        printf("ERROR : Invalid device index %d.\n",deviceIndex);
+        return;
+    }
+    if(devices[deviceIndex].state != CONNECTED)
+    {
+        printf("ERROR : Invalid device state for device with index %d.\n", deviceIndex);
+        return;
+    }
+    devices[deviceIndex].reportId = reportId;
+    devices[deviceIndex].report = report;
+    devices[deviceIndex].reportLength = reportLength;
+    uint8_t result = l2cap_request_can_send_now_event(devices[deviceIndex].l2capHidInterruptCid);
+    if(result)
+    {
+        printf("ERROR while asking send now event : %04x.\n", result);
     }
 }
 
@@ -644,7 +711,8 @@ void maybeRumble()
         shouldRumble = false;
         rumbleState = !rumbleState;
         printf("Before Rumble with state %d.\n",rumbleState);
-        hid_host_send_report(rumbleBtChanel,0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
+        int deviceIndex = getDeviceIndexForChannel(rumbleBtChanel);
+        sendOutputReport(deviceIndex,0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
         printf("After Rumble !\n");
     }
 }
