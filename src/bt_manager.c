@@ -284,6 +284,27 @@ int addDevice(bd_addr_t address, uint8_t pageScanRepetitionMode, uint16_t clockO
     return deviceIndex;
 }
 
+void sendOutputReport(int deviceIndex, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
+{
+    if(deviceIndex < 0 || deviceIndex >= deviceCount)
+    {
+        printf("ERROR : Invalid device index %d.\n",deviceIndex);
+        return;
+    }
+    if(devices[deviceIndex].state != CONNECTED)
+    {
+        printf("ERROR : Invalid device state for device with index %d.\n", deviceIndex);
+        return;
+    }
+    devices[deviceIndex].reportId = reportId;
+    devices[deviceIndex].report = report;
+    devices[deviceIndex].reportLength = reportLength;
+    uint8_t result = l2cap_request_can_send_now_event(devices[deviceIndex].l2capHidInterruptCid);
+    if(result)
+    {
+        printf("ERROR while asking send now event : %04x.\n", result);
+    }
+}
 
 static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint16_t size)
 {
@@ -413,7 +434,14 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
             devices[currentConnectingDevice].l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
             // Connection successfull
             devices[currentConnectingDevice].state = CONNECTED;
-            currentConnectingDevice = -1;
+            if(devices[currentConnectingDevice].classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
+            {   // TODO : Move this code to wiimote driver
+                uint8_t leds = 0b0001;
+                uint8_t payload[1];
+                payload[0] = (uint8_t)(leds << 4);
+                sendOutputReport(currentConnectingDevice,0x11,payload,1);
+            }
+            currentConnectingDevice = -1;            
             // Check for other connections
             do_connection_requests();
             break;
@@ -672,28 +700,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
     }
 }
 
-
-void sendOutputReport(int deviceIndex, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
-{
-    if(deviceIndex < 0 || deviceIndex >= deviceCount)
-    {
-        printf("ERROR : Invalid device index %d.\n",deviceIndex);
-        return;
-    }
-    if(devices[deviceIndex].state != CONNECTED)
-    {
-        printf("ERROR : Invalid device state for device with index %d.\n", deviceIndex);
-        return;
-    }
-    devices[deviceIndex].reportId = reportId;
-    devices[deviceIndex].report = report;
-    devices[deviceIndex].reportLength = reportLength;
-    uint8_t result = l2cap_request_can_send_now_event(devices[deviceIndex].l2capHidInterruptCid);
-    if(result)
-    {
-        printf("ERROR while asking send now event : %04x.\n", result);
-    }
-}
 
 /*************************************************************************************************/
 
