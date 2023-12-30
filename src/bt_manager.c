@@ -139,6 +139,8 @@ static void hid_host_setup(void)
     hci_add_event_handler(&hci_event_callback_registration);
 
     //hci_dump_init(hci_dump_embedded_stdout_get_instance());
+    //hci_dump_enable_packet_log(false);
+    //hci_dump_enable_log_level(HCI_DUMP_LOG_LEVEL_DEBUG,false);
 
     // Disable stdout buffering
     setvbuf(stdin, NULL, _IONBF, 0);
