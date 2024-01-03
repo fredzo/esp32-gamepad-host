@@ -9,6 +9,8 @@
 #include "btstack_run_loop.h"
 #include "hci_dump.h"
 
+#include "esp_bt.h"
+
 #include <inttypes.h>
 
 extern void btstack_init();
@@ -735,6 +737,11 @@ void maybeRumble()
     }
 }
 
+void configuration_customizer(esp_bt_controller_config_t *cfg)
+{
+    cfg->bt_max_acl_conn = 4;
+}
+
 /*************************************************************************************************/
 //static const char remote_addr_string[] = "1F-97-19-05-06-07";
 static const char remote_addr_string[] = "15-97-19-05-06-07";
@@ -747,6 +754,8 @@ int btstack_main(int argc, const char * argv[])
 
     // Configure BTstack
     btstack_init();
+    // Register configuration customizr
+    btstack_esp32_register_configuration_customizer(configuration_customizer);
 
     // Setup for HID Host
     hid_host_setup();

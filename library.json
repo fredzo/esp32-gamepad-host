@@ -1,0 +1,39 @@
+{
+  "name": "ESP32 Gamepad Host",
+  "version": "0.1.0",
+  "authors": {
+    "name": "Fredzo",
+    "email": "https://github.com/fredzo"
+  },
+  "description": "This library is a host driver used to connect bluetooth gamepads and joysticks to ESP32 projects.",
+  "keywords": [
+    "esp32",
+    "bluetooth",
+    "gamepad",
+    "joystick",
+    "host",
+	"driver",
+    "arduino-library",
+    "game"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fredzo/esp32-gamepad-host"
+  },
+  "licence": "MIT License",
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "examples": [
+    {
+      "name": "gamepad-example",
+      "base": "examples/gamepad-example",
+      "files": [
+        "main.cpp"
+      ]
+    }
+  ]
+}
