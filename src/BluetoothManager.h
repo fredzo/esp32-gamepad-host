@@ -1,8 +1,8 @@
 
 /* Include Guard */
 
-#ifndef BT_MANAGER_H
-#define BT_MANAGER_H
+#ifndef BLUETOOTH_MANAGER_H
+#define BLUETOOTH_MANAGER_H
 
 /*************************************************************************************************/
 
@@ -16,10 +16,9 @@ extern "C" {
 
 /* Functions */
 
-int btstack_main(int argc, const char * argv[]);
-int btstack_main_new(int argc, const char * argv[]);
+int btstackInit(int maxConnections);
+void btstackRun();
 void maybeRumble();
-void btstack_run(void);
 
 /*************************************************************************************************/
 

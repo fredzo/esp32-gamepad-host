@@ -1,9 +1,7 @@
 /*************************************************************************************************/
 #include <Arduino.h>
 #include "btstack.h"
-#include "bt_manager.h"
-#include "config.h"
-#include "gamepad_manager.h"
+#include <BluetoothManager.h>
 
 #include "btstack_config.h"
 #include "btstack_run_loop.h"
@@ -717,7 +715,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 
 /*************************************************************************************************/
 
-void btstack_run(void)
+void btstackRun(void)
 {
     btstack_run_loop_execute();
 }
@@ -737,9 +735,10 @@ void maybeRumble()
     }
 }
 
+int btStackMaxConnections;
 void configuration_customizer(esp_bt_controller_config_t *cfg)
 {
-    cfg->bt_max_acl_conn = 4;
+    cfg->bt_max_acl_conn = btStackMaxConnections;
 }
 
 /*************************************************************************************************/
@@ -747,11 +746,9 @@ void configuration_customizer(esp_bt_controller_config_t *cfg)
 static const char remote_addr_string[] = "15-97-19-05-06-07";
 //static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
 
-int btstack_main(int argc, const char * argv[])
+int btstackInit(int maxConnections)
 {
-    (void)argc;
-    (void)argv;
-
+    btStackMaxConnections = maxConnections;
     // Configure BTstack
     btstack_init();
     // Register configuration customizr
