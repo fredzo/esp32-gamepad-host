@@ -6,9 +6,12 @@ Esp32GamepadHost* Esp32GamepadHost::esp32GamepadHostInstance = nullptr;
 
 
 // dual core mode runs emulator on comms core
-void btTask(void* arg)
+void btTask(void* args)
 {
-    LOG_INFO("emu_task running on core %d\n",xPortGetCoreID());
+    int maxGamepads = ((int *)args)[0];
+    LOG_INFO("Esp32GamepadHost bluetooth task running on core %d\n",xPortGetCoreID());
+    //btstackInit(config->maxGamepads*2); // We need to conenxions per gamepad
+    btstackInit(maxGamepads); // We need to conenxions per gamepad
     btstackRun();
 }
 
@@ -18,8 +21,8 @@ void Esp32GamepadHost::init()
 }
 void Esp32GamepadHost::init(Config config)
 {
-    btstackInit(config.maxGamepads*2); // We need to conenxions per gamepad
-    xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, NULL, config.btTaskPriority, NULL, config.btTaskCoreId);
+    int args[] = {config.maxGamepads};
+    xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, args, config.btTaskPriority, NULL, config.btTaskCoreId);
 }
 
 int Esp32GamepadHost::getGamepadCount()

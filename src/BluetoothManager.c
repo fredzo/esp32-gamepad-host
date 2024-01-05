@@ -138,9 +138,9 @@ static void hid_host_setup(void)
     hci_event_callback_registration.callback = &packet_handler;
     hci_add_event_handler(&hci_event_callback_registration);
 
-    //hci_dump_init(hci_dump_embedded_stdout_get_instance());
-    //hci_dump_enable_packet_log(false);
-    //hci_dump_enable_log_level(HCI_DUMP_LOG_LEVEL_DEBUG,false);
+    hci_dump_init(hci_dump_embedded_stdout_get_instance());
+    hci_dump_enable_packet_log(false);
+    hci_dump_enable_log_level(HCI_DUMP_LOG_LEVEL_DEBUG,false);
 
     // Disable stdout buffering
     setvbuf(stdin, NULL, _IONBF, 0);
@@ -229,7 +229,7 @@ static void list_link_keys(void)
         printf("Stored link keys:\n");
     while (gap_link_key_iterator_get_next(&it, addr, link_key, &type)) {
         printf("%s - type %u, key: ", bd_addr_to_str(addr), (int)type);
-        debug_hexdump(link_key, 16);
+        LOG_HEXDUMP(link_key, 16);
         if (delete_keys) {
         gap_drop_link_key_for_bd_addr(addr);
         }
