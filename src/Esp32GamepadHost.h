@@ -28,7 +28,7 @@ class Esp32GamepadHost
             defaultConfig.btTaskStackDepth = DEFAULT_BT_TASK_SIZE;
             defaultConfig.btTaskPriority = DEFAULT_BT_TASK_PRIORITY;
             defaultConfig.btTaskCoreId = DEFAULT_BT_TASK_CORE_ID;
-            defaultConfig.maxGamepads = MAX_GAMEPADS;
+            defaultConfig.maxGamepads = MAX_CONNECTED_GAMEPADS;
             return defaultConfig;
         };
 
@@ -39,6 +39,14 @@ class Esp32GamepadHost
         Gamepad::Command getCommand();
         Gamepad::Command getCommandForGamepad(int idndex);
         void processTasks();
+
+        Gamepad* addGamepad(bd_addr_t address, uint8_t pageScanRepetitionMode, uint16_t clockOffset, uint32_t classOfDevice, Gamepad::State state);
+
+        Gamepad* getGamepadForAddress(bd_addr_t addr);
+        Gamepad* getGamepadForChannel(uint16_t channel);
+        Gamepad* getConnectingGamepad() { return connectingGamepad; };
+        Gamepad* askGamepadConnection();
+        void     finishConnectingGamepad() { connectingGamepad = NULL; };
 
     private :
         Esp32GamepadHost()
@@ -51,6 +59,8 @@ class Esp32GamepadHost
 
         Gamepad* gamepads[MAX_GAMEPADS];
         int gamepadCount = 0;
+        int gamepadIndex = 0;
+        Gamepad* connectingGamepad = NULL;
 
         static Esp32GamepadHost *esp32GamepadHostInstance;
 };

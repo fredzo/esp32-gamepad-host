@@ -1,6 +1,9 @@
 #ifndef GAMEPAD_H
 #define GAMEPAD_H
 #include <Arduino.h>
+extern "C" {
+#include <btstack.h>
+}
 
 class Gamepad
 {
@@ -22,10 +25,29 @@ class Gamepad
                 bool hasCommand();
         };
         static Command NO_COMMAND;
+        
+        enum class State { CONNECTION_REQUESTED, CONNECTING, CONNECTED, DISCONNECTED };
 
-        void init();
-        void processTasks();
         Command getCommand();
+
+        // Index of this gamepad in the gamepadHost
+        int index;
+
+        // Bluetooth data
+        bd_addr_t          address;
+        uint8_t            pageScanRepetitionMode;
+        uint16_t           clockOffset;
+        uint32_t           classOfDevice;
+        uint16_t           l2capHidControlCid;
+        uint16_t           l2capHidInterruptCid;
+        // Four output reports
+        uint8_t            reportId;
+        const uint8_t *    report;
+        uint16_t           reportLength;
+
+        // Bluetooth state
+        State              state; 
+
 
     private :
         bool logging = false;

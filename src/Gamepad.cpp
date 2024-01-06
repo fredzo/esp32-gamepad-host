@@ -8,16 +8,6 @@ bool Gamepad::Command::hasCommand()
     return (a || b || up || down || left || right || plus || minus || menu || trig || home );
 }
 
-void Gamepad::init()
-{
-  last_ms = millis();
-}
-
-void Gamepad::processTasks()
-{
-   num_run++;
-}
-
 Gamepad::Command Gamepad::getCommand()
 {
 #ifdef BLUETOOTH

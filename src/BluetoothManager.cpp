@@ -1,17 +1,17 @@
 /*************************************************************************************************/
 #include <Arduino.h>
-#include "btstack.h"
+#include <Esp32GamepadHost.h>
 #include <BluetoothManager.h>
 
+extern "C" {
+#include <btstack.h>
 #include "btstack_config.h"
 #include "btstack_run_loop.h"
 #include "hci_dump.h"
-
-#include "esp_bt.h"
-
-#include <inttypes.h>
-
+#include "hci_dump_embedded_stdout.h"
 extern void btstack_init();
+}
+
 
 /*************************************************************************************************/
 
@@ -23,11 +23,10 @@ extern void btstack_init();
 #define CLASS_OF_DEVICE_GAMEPAD_END    0x0025FF
 #define CLASS_OF_DEVICE_WIIMOTE        0x002504
 
-
+// Reference to Esp32GamepadHost instance
+Esp32GamepadHost* gamepadHost;
 
 /*************************************************************************************************/
-
-//static bd_addr_t remote_addr;
 
 static btstack_packet_callback_registration_t hci_event_callback_registration;
 
@@ -40,12 +39,14 @@ static uint8_t hid_descriptor_storage[MAX_ATTRIBUTE_VALUE_SIZE];
 static uint8_t last_packet[128];
 
 // App
-static enum {
+enum BluetoothState {
     APP_INIT,
     APP_IDLE,
     APP_CONNECTING,
     APP_CONNECTED
-} app_state = APP_INIT;
+};
+
+static BluetoothState app_state = APP_INIT;
 
 ////////////////// Gap Inquiry
 
@@ -68,32 +69,6 @@ struct device {
 };
 
 #define INQUIRY_INTERVAL 5
-struct device devices[MAX_DEVICES];
-int deviceCount = 0;
-int currentConnectingDevice = -1;
-
-static int getDeviceIndexForAddress( bd_addr_t addr){
-    int j;
-    for (j=0; j< deviceCount; j++){
-        if (bd_addr_cmp(addr, devices[j].address) == 0){
-            return j;
-        }
-    }
-    return -1;
-}
-
-static int getDeviceIndexForChannel(uint16_t channel){
-    int j;
-    if(channel > 0)
-    {
-        for (j=0; j< deviceCount; j++){
-            if (devices[j].l2capHidControlCid == channel || devices[j].l2capHidInterruptCid == channel){
-                return j;
-            }
-        }
-    }
-    return -1;
-}
 
 static void start_scan(void){
     printf("Starting inquiry scan..\n");
@@ -196,13 +171,14 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
     switch (hci_event_packet_get_type(packet))
     {
         case SDP_EVENT_QUERY_COMPLETE:
-                if(currentConnectingDevice < 0)
+                Gamepad* connectingGamepad = gamepadHost->getConnectingGamepad();
+                if(connectingGamepad == NULL)
                 {
                     printf("ERROR : SDP query complete event received but no device is currently connecting...\n");
                     return;
                 }
-                status = l2cap_create_channel(packet_handler, devices[currentConnectingDevice].address, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &(devices[currentConnectingDevice].l2capHidControlCid));
-                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel with device index %d for cid  0x%04x and address %s : status 0x%02x\n",currentConnectingDevice, devices[currentConnectingDevice].l2capHidControlCid, bd_addr_to_str(devices[currentConnectingDevice].address), status);
+                status = l2cap_create_channel(packet_handler, connectingGamepad->address, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &(connectingGamepad->l2capHidControlCid));
+                printf("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel with device index %d for cid  0x%04x and address %s : status 0x%02x\n",connectingGamepad->index, connectingGamepad->l2capHidControlCid, bd_addr_to_str(connectingGamepad->address), status);
                 if (status){
                     printf("Connecting to HID Control failed: 0x%02x\n", status);
                 }
@@ -239,69 +215,49 @@ static void list_link_keys(void)
 }
 
 static void do_connection_requests(void){
-    int i;
-    // Prevent simmultaneous connection process
-    if(currentConnectingDevice >= 0) return;
-    for (i=0;i<deviceCount;i++) {
-        // remote name request
-        if (devices[i].state == CONNECTION_REQUESTED){
-            devices[i].state = CONNECTING;
-            // Connect to device
-            currentConnectingDevice = i;
-            printf("Connect to device for index %d.\n",currentConnectingDevice);
-            if(devices[i].classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
-            {   // For wiimote
-                printf("Setting security level to 0 for wiimote.\n");
-                gap_set_security_level(LEVEL_0);  
-            }
-            else
-            {   // Default level is 2
-                gap_set_security_level(LEVEL_2);  
-            }
+    Gamepad* gamepadToConnect = gamepadHost->askGamepadConnection();
+    if(gamepadToConnect != NULL)
+    {   // Connect to gamepad
+        printf("Connect to device for index %d.\n",gamepadToConnect->index);
+        // TODO : move this to wimote sepcific code
+        if(gamepadToConnect->classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
+        {   // For wiimote
+            printf("Setting security level to 0 for wiimote.\n");
+            gap_set_security_level(LEVEL_0);  
+        }
+        else
+        {   // Default level is 2
+            gap_set_security_level(LEVEL_2);  
+        }
 
-            printf("Start SDP HID query for remote HID Device with address=%s.\n",
-            bd_addr_to_str(devices[i].address));
-            //list_link_keys();
-            uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, devices[i].address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
-            if (status == ERROR_CODE_SUCCESS) {
-                app_state = APP_CONNECTING;
-            } else {
-                printf("Host connection failed, status 0x%02x\n", status);
-            }
-            // End loop until connection is complete
-            return;
+        printf("Start SDP HID query for remote HID Device with address=%s.\n",
+        bd_addr_to_str(gamepadToConnect->address));
+        //list_link_keys();
+        uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, gamepadToConnect->address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
+        if (status == ERROR_CODE_SUCCESS) {
+            app_state = APP_CONNECTING;
+        } else {
+            printf("Host connection failed, status 0x%02x\n", status);
         }
     }
 }
 
-int addDevice(bd_addr_t address, uint8_t pageScanRepetitionMode, uint16_t clockOffset, uint32_t classOfDevice, enum DEVICE_STATE state)
+void sendOutputReport(Gamepad* gamepad, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
 {
-    int deviceIndex = (deviceCount < MAX_DEVICES) ? deviceCount : 0;  // add at the begining if no room left
-    memcpy(devices[deviceIndex].address, address, 6);
-    devices[deviceIndex].pageScanRepetitionMode = pageScanRepetitionMode;
-    devices[deviceIndex].clockOffset = clockOffset;
-    devices[deviceIndex].classOfDevice = classOfDevice;
-    devices[deviceIndex].state = state;
-    if(deviceIndex == deviceCount)  deviceCount++;
-    return deviceIndex;
-}
-
-void sendOutputReport(int deviceIndex, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
-{
-    if(deviceIndex < 0 || deviceIndex >= deviceCount)
+    if(gamepad == NULL)
     {
-        printf("ERROR : Invalid device index %d.\n",deviceIndex);
+        printf("ERROR : sendOutputReport gamepad must not be NULL.\n");
         return;
     }
-    if(devices[deviceIndex].state != CONNECTED)
+    if(gamepad->state != Gamepad::State::CONNECTED)
     {
-        printf("ERROR : Invalid device state for device with index %d.\n", deviceIndex);
+        printf("ERROR : Invalid device state for device with index %d.\n", gamepad->index);
         return;
     }
-    devices[deviceIndex].reportId = reportId;
-    devices[deviceIndex].report = report;
-    devices[deviceIndex].reportLength = reportLength;
-    uint8_t result = l2cap_request_can_send_now_event(devices[deviceIndex].l2capHidInterruptCid);
+    gamepad->reportId = reportId;
+    gamepad->report = report;
+    gamepad->reportLength = reportLength;
+    uint8_t result = l2cap_request_can_send_now_event(gamepad->l2capHidInterruptCid);
     if(result)
     {
         printf("ERROR while asking send now event : %04x.\n", result);
@@ -323,10 +279,11 @@ static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint
     local_cid = l2cap_event_channel_opened_get_local_cid(packet);
     l2cap_event_incoming_connection_get_address(packet,address);
 
-    if(currentConnectingDevice < 0)
+    Gamepad* connectingGamepad = gamepadHost->getConnectingGamepad();
+    if(connectingGamepad == NULL)
     {
         printf("L2CAP channel open event received but no device is currently connecting : adding a new device\n");
-        currentConnectingDevice = addDevice(address,psm,0,CLASS_OF_DEVICE_GAMEPAD_START,CONNECTING);
+        connectingGamepad = gamepadHost->addGamepad(address,psm,0,CLASS_OF_DEVICE_GAMEPAD_START,Gamepad::State::CONNECTING);
     }
 
     printf("L2CAP_EVENT_INCOMING_CONNECTION (psm=0x%04x, local_cid=0x%04x, "
@@ -334,11 +291,11 @@ static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint
     switch (psm)
     {
         case PSM_HID_CONTROL:
-            devices[currentConnectingDevice].l2capHidControlCid = channel;
+            connectingGamepad->l2capHidControlCid = channel;
             l2cap_accept_connection(channel);
             break;
         case PSM_HID_INTERRUPT:
-            devices[currentConnectingDevice].l2capHidInterruptCid = channel;
+            connectingGamepad->l2capHidInterruptCid = channel;
             l2cap_accept_connection(channel);
             break;
         default:
@@ -354,11 +311,11 @@ static void on_l2cap_channel_closed(uint16_t channel, uint8_t* packet, int16_t s
 
     local_cid = l2cap_event_channel_closed_get_local_cid(packet);
     printf("L2CAP_EVENT_CHANNEL_CLOSED: 0x%04x (channel=0x%04x)\n", local_cid, channel);
-    int deviceIndex = getDeviceIndexForChannel(channel);
-    if(deviceIndex >= 0)
+    Gamepad* connectingGamepad = gamepadHost->getGamepadForChannel(channel);
+    if(connectingGamepad != NULL)
     {
-        printf("Device with index %d disconnected.\n", deviceIndex);
-        devices[deviceIndex].state = DISCONNECTED;
+        printf("Device with index %d disconnected.\n", connectingGamepad->index);
+        connectingGamepad->state = Gamepad::State::DISCONNECTED;
     }
 }
 
@@ -409,7 +366,8 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
     "incoming=%d, local MTU=%d, remote MTU=%d\n",
     psm, local_cid, remote_cid, handle, incoming, local_mtu, remote_mtu);
 
-    if(currentConnectingDevice < 0)
+    Gamepad* connectingGamepad = gamepadHost->getConnectingGamepad();
+    if(connectingGamepad == NULL)
     {
         printf("ERROR : L2CAP channel open event received but no device is currently connecting...\n");
         return;
@@ -418,11 +376,11 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
     switch (psm)
     {
         case PSM_HID_CONTROL:
-            devices[currentConnectingDevice].l2capHidControlCid = l2cap_event_channel_opened_get_local_cid(packet);
+            connectingGamepad->l2capHidControlCid = l2cap_event_channel_opened_get_local_cid(packet);
             if(!incoming)
             {
                 printf("l2cap_create_channel PSM_HID_INTERRUPT");
-                status = l2cap_create_channel(packet_handler, address, PSM_HID_INTERRUPT, L2CAP_CHANNEL_MTU, &(devices[currentConnectingDevice].l2capHidControlCid));
+                status = l2cap_create_channel(packet_handler, address, PSM_HID_INTERRUPT, L2CAP_CHANNEL_MTU, &(connectingGamepad->l2capHidControlCid));
                 if (status)
                 {
                     printf("Connecting to HID Control failed: 0x%02x\n", status);
@@ -432,18 +390,18 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
             break;
 
         case PSM_HID_INTERRUPT:
-            printf("L2CAP interrupt channel open for deviceIndex %d, connection complete.\n",currentConnectingDevice);
-            devices[currentConnectingDevice].l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
+            printf("L2CAP interrupt channel open for deviceIndex %d, connection complete.\n",connectingGamepad->index);
+            connectingGamepad->l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
             // Connection successfull
-            devices[currentConnectingDevice].state = CONNECTED;
-            if(devices[currentConnectingDevice].classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
+            connectingGamepad->state = Gamepad::State::CONNECTED;
+            if(connectingGamepad->classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
             {   // TODO : Move this code to wiimote driver
                 uint8_t leds = 0b0001;
                 uint8_t payload[1];
                 payload[0] = (uint8_t)(leds << 4);
-                sendOutputReport(currentConnectingDevice,0x11,payload,1);
+                sendOutputReport(connectingGamepad,0x11,payload,1);
             }
-            currentConnectingDevice = -1;            
+            gamepadHost->finishConnectingGamepad();
             // Check for other connections
             do_connection_requests();
             break;
@@ -495,19 +453,18 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
             case HCI_EVENT_PACKET:
 
                 //printf("HCI_EVENT_PACKET: 0x%02x\n", hci_event_packet_get_type(packet));
-
+                Gamepad* gamepad;
                 switch (event)
                 {
                     case GAP_EVENT_INQUIRY_RESULT:
-                        if (deviceCount >= MAX_DEVICES) break;  // already full
                         gap_event_inquiry_result_get_bd_addr(packet, event_addr);
 
-                        deviceIndex = getDeviceIndexForAddress(event_addr);
-                        if (deviceIndex >= 0)
+                        gamepad = gamepadHost->getGamepadForAddress(event_addr);
+                        if (gamepad != NULL)
                         {   // already in our list
-                            if(devices[deviceIndex].state != CONNECTED)
+                            if(gamepad->state != Gamepad::State::CONNECTED)
                             {   // Ask for reconnection
-                                devices[deviceIndex].state = CONNECTION_REQUESTED;
+                                gamepad->state = Gamepad::State::CONNECTION_REQUESTED;
                                 do_connection_requests();
                             }
                         }
@@ -516,17 +473,17 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                             classOfDevice = gap_event_inquiry_result_get_class_of_device(packet);
                             if(classOfDevice >= CLASS_OF_DEVICE_GAMEPAD_START && classOfDevice <= CLASS_OF_DEVICE_GAMEPAD_END)
                             {   // Filter on gamepads
-                                deviceIndex = addDevice(event_addr, 
+                                gamepad = gamepadHost->addGamepad(event_addr, 
                                 gap_event_inquiry_result_get_page_scan_repetition_mode(packet),
                                 gap_event_inquiry_result_get_clock_offset(packet),
                                 classOfDevice,
-                                CONNECTION_REQUESTED);
+                                Gamepad::State::CONNECTION_REQUESTED);
 
                                 // print info
                                 printf("Device found: %s ",  bd_addr_to_str(event_addr));
                                 printf("with COD: 0x%06x, ", (unsigned int) classOfDevice);
-                                printf("pageScan %d, ",      devices[deviceIndex].pageScanRepetitionMode);
-                                printf("clock offset 0x%04x",devices[deviceIndex].clockOffset);
+                                printf("pageScan %d, ",      gamepad->pageScanRepetitionMode);
+                                printf("clock offset 0x%04x",gamepad->clockOffset);
                                 if (gap_event_inquiry_result_get_rssi_available(packet)){
                                     printf(", rssi %d dBm", (int8_t) gap_event_inquiry_result_get_rssi(packet));
                                 }
@@ -551,8 +508,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 
                     case HCI_EVENT_REMOTE_NAME_REQUEST_COMPLETE:
                         reverse_bd_addr(&packet[3], event_addr);
-                        deviceIndex = getDeviceIndexForAddress(event_addr);
-                        if (deviceIndex >= 0) {
+                        gamepad = gamepadHost->getGamepadForAddress(event_addr);
+                        if (gamepad != NULL) {
                             if (packet[2] == 0) {
                                 printf("Name: '%s'\n", &packet[9]);
                             } else {
@@ -648,25 +605,27 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         on_l2cap_channel_opened(channel, packet, size);
                         break;
                     case L2CAP_EVENT_CAN_SEND_NOW:
-                        deviceIndex = getDeviceIndexForChannel(channel);
+                    {
+                        gamepad = gamepadHost->getGamepadForChannel(channel);
                         if(deviceIndex < 0)
                         {
                             printf("ERROR : Received can send event for channel 0x%04x : no device found.\n",channel);
                         }
-                        if(devices[deviceIndex].reportLength <= 0)
+                        if(gamepad->reportLength <= 0)
                         {
                             printf("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
-                        printf("Sending output report of length %d for device index %d.\n",devices[deviceIndex].reportLength,deviceIndex);
+                        printf("Sending output report of length %d for device index %d.\n",gamepad->reportLength,deviceIndex);
                         uint8_t header = (HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT;
                         l2cap_reserve_packet_buffer();
                         uint8_t * out_buffer = l2cap_get_outgoing_buffer();
                         out_buffer[0] = header;
-                        out_buffer[1] = devices[deviceIndex].reportId;
-                        (void)memcpy(out_buffer + 2, devices[deviceIndex].report, devices[deviceIndex].reportLength);
-                        l2cap_send_prepared(devices[deviceIndex].l2capHidInterruptCid, devices[deviceIndex].reportLength + 2);
-                        devices[deviceIndex].reportLength = 0;
+                        out_buffer[1] = gamepad->reportId;
+                        (void)memcpy(out_buffer + 2, gamepad->report, gamepad->reportLength);
+                        l2cap_send_prepared(gamepad->l2capHidInterruptCid, gamepad->reportLength + 2);
+                        gamepad->reportLength = 0;
                         break;
+                    }
 
                     default:
                         break;
@@ -729,8 +688,8 @@ void maybeRumble()
         shouldRumble = false;
         rumbleState = !rumbleState;
         printf("Before Rumble with state %d.\n",rumbleState);
-        int deviceIndex = getDeviceIndexForChannel(rumbleBtChanel);
-        sendOutputReport(deviceIndex,0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
+        Gamepad* gamepad = gamepadHost->getGamepadForChannel(rumbleBtChanel);
+        sendOutputReport(gamepad,0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
         printf("After Rumble !\n");
     }
 }
@@ -739,16 +698,18 @@ int btStackMaxConnections;
 void configuration_customizer(esp_bt_controller_config_t *cfg)
 {
     cfg->bt_max_acl_conn = btStackMaxConnections;
+    //cfg->ble_max_conn = 0;
 }
 
 /*************************************************************************************************/
-//static const char remote_addr_string[] = "1F-97-19-05-06-07";
-static const char remote_addr_string[] = "15-97-19-05-06-07";
-//static const char remote_addr_string[] = "CC-9E-00-C9-FC-F1";
 
 int btstackInit(int maxConnections)
-{
+{   // Store max copnnections param
     btStackMaxConnections = maxConnections;
+    
+    // Get reference to gamepadHost singleton instance
+    gamepadHost = Esp32GamepadHost::getEsp32GamepadHost();
+
     // Configure BTstack
     btstack_init();
     // Register configuration customizr
@@ -756,9 +717,6 @@ int btstackInit(int maxConnections)
 
     // Setup for HID Host
     hid_host_setup();
-
-    // Parse human readable Bluetooth address
-    //sscanf_bd_addr(remote_addr_string, remote_addr);
 
     // Turn on the device 
     hci_power_control(HCI_POWER_ON);

@@ -38,7 +38,10 @@
 #define DEFAULT_BT_TASK_CORE_ID     0
 
 // Max number of connected gamepads
-#define MAX_GAMEPADS                2
+#define MAX_CONNECTED_GAMEPADS      6
+
+// Max number of listed gamepads (regardless of their connection status)
+#define MAX_GAMEPADS                16
 
 // Bluetooth class of devices
 #define CLASS_OF_DEVICE_GAMEPAD_START  0x002500
