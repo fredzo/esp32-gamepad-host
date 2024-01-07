@@ -3,6 +3,23 @@
 
 Gamepad::Command Gamepad::NO_COMMAND = Gamepad::Command();
 
+bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
+{
+    if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize)!=0))
+    {
+        LOG_INFO("Parsing Gamepad Data: ");
+        LOG_HEXDUMP(packet,packetSize);
+        // TODO : parse
+        // Store packet content to last packet
+        memcpy(lastPacket,packet,packetSize);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool Gamepad::Command::hasCommand()
 {
     return (a || b || up || down || left || right || plus || minus || menu || trig || home );

@@ -46,7 +46,7 @@ static BluetoothState bluetoothState = INIT;
 #define INQUIRY_INTERVAL 5
 
 static void start_scan(void){
-    LOG_INFO("Starting inquiry scan..\n");
+    LOG_DEBUG("Starting inquiry scan..\n");
     uint8_t result = gap_inquiry_start(INQUIRY_INTERVAL);
     if(result != ERROR_CODE_SUCCESS) {
         LOG_ERROR("Inquiry failed, status 0x%02x\n", result);
@@ -364,9 +364,6 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
  * 
  * @text The packet handler responds to various HCI Events.
  */
-
-
-/* LISTING_START(packetHandler): Packet Handler */
 static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)
 {
     uint8_t   event;
@@ -572,11 +569,10 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                 gamepad = gamepadHost->getGamepadForChannel(channel);
                 if (gamepad != NULL)
                 {
-                    if(size < MAX_BT_DATA_SIZE && (memcmp(gamepad->lastPacket,packet,size)!=0))
+                    if(gamepad->parseDataPacket(packet,size))
                     {
                         LOG_DEBUG("Gamepad DATA_PACKET ");
                         LOG_HEXDUMP(packet,size);
-                        memcpy(gamepad->lastPacket,packet,size);
                         if(packet[7]>=0x20)
                         {
                             printf("Will Rumble.\n");
@@ -625,7 +621,6 @@ int btStackMaxConnections;
 void configuration_customizer(esp_bt_controller_config_t *cfg)
 {
     cfg->bt_max_acl_conn = btStackMaxConnections;
-    //cfg->ble_max_conn = 0;
 }
 
 /*************************************************************************************************/

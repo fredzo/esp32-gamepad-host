@@ -52,6 +52,8 @@ class Gamepad
         // Bluetooth state
         State              state; 
 
+        bool parseDataPacket(uint8_t * packet, uint16_t packetSize);
+
 
     private :
         bool logging = false;
