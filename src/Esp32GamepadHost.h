@@ -47,6 +47,7 @@ class Esp32GamepadHost
         Gamepad* getConnectingGamepad() { return connectingGamepad; };
         Gamepad* askGamepadConnection();
         void     finishConnectingGamepad() { connectingGamepad = NULL; };
+        bool     hasConnectedGamepad();
 
     private :
         Esp32GamepadHost()

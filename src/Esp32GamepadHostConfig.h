@@ -37,6 +37,9 @@
 #define DEFAULT_BT_TASK_PRIORITY    1
 #define DEFAULT_BT_TASK_CORE_ID     0
 
+// Max size for data packets
+#define MAX_BT_DATA_SIZE            128
+
 // Max number of connected gamepads
 #define MAX_CONNECTED_GAMEPADS      6
 

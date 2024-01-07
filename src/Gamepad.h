@@ -1,6 +1,7 @@
 #ifndef GAMEPAD_H
 #define GAMEPAD_H
 #include <Arduino.h>
+#include <Esp32GamepadHostConfig.h>
 extern "C" {
 #include <btstack.h>
 }
@@ -42,8 +43,11 @@ class Gamepad
         uint16_t           l2capHidInterruptCid;
         // Four output reports
         uint8_t            reportId;
-        const uint8_t *    report;
+        uint8_t            report[MAX_BT_DATA_SIZE];
         uint16_t           reportLength;
+
+        // For data packet history
+        uint8_t            lastPacket[MAX_BT_DATA_SIZE];
 
         // Bluetooth state
         State              state; 

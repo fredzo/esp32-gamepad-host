@@ -79,8 +79,7 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, uint8_t pageScanRepetit
 
 Gamepad* Esp32GamepadHost::getGamepadForAddress(bd_addr_t addr)
 {
-    int j;
-    for (j=0; j < gamepadCount; j++){
+    for (int j=0; j < gamepadCount; j++){
         if (bd_addr_cmp(addr, gamepads[j]->address) == 0){
             return gamepads[j];
         }
@@ -90,10 +89,9 @@ Gamepad* Esp32GamepadHost::getGamepadForAddress(bd_addr_t addr)
 
 Gamepad* Esp32GamepadHost::getGamepadForChannel(uint16_t channel)
 {
-    int j;
     if(channel > 0)
     {
-        for (j=0; j< gamepadCount; j++){
+        for (int j=0; j< gamepadCount; j++){
             if (gamepads[j]->l2capHidControlCid == channel || gamepads[j]->l2capHidInterruptCid == channel){
                 return gamepads[j];
             }
@@ -116,4 +114,14 @@ Gamepad* Esp32GamepadHost::askGamepadConnection()
         }
     }
     return NULL;
+}
+
+bool Esp32GamepadHost::hasConnectedGamepad()
+{
+    for (int j=0; j < gamepadCount; j++){
+        if (gamepads[j]->state == Gamepad::State::CONNECTED){
+            return true;
+        }
+    }
+    return false;
 }
