@@ -20,7 +20,4 @@ class GamepadCommand {
 
     static GamepadCommand NO_COMMAND;
 };
-        
-GamepadCommand GamepadCommand::NO_COMMAND = GamepadCommand();
-
 #endif 
