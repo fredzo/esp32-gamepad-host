@@ -33,15 +33,15 @@ Gamepad* Esp32GamepadHost::getGamepad(int index)
     return NULL;
 }
 
-Gamepad::Command Esp32GamepadHost::getCommandForGamepad(int idndex)
+GamepadCommand Esp32GamepadHost::getCommandForGamepad(int idndex)
 {
-    Gamepad::Command result = Gamepad::NO_COMMAND;
+    GamepadCommand result = GamepadCommand::NO_COMMAND;
     return result;
 }
 
-Gamepad::Command Esp32GamepadHost::getCommand()
+GamepadCommand Esp32GamepadHost::getCommand()
 {
-    Gamepad::Command result = Gamepad::NO_COMMAND;
+    GamepadCommand result = GamepadCommand::NO_COMMAND;
     return result;
 }
 

@@ -36,8 +36,8 @@ class Esp32GamepadHost
         void init(Config config);
         int getGamepadCount();
         Gamepad* getGamepad(int index);
-        Gamepad::Command getCommand();
-        Gamepad::Command getCommandForGamepad(int idndex);
+        GamepadCommand getCommand();
+        GamepadCommand getCommandForGamepad(int idndex);
         void processTasks();
 
         Gamepad* addGamepad(bd_addr_t address, uint8_t pageScanRepetitionMode, uint16_t clockOffset, uint32_t classOfDevice, Gamepad::State state);

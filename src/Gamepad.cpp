@@ -1,8 +1,6 @@
 #include <Gamepad.h>
 
 
-Gamepad::Command Gamepad::NO_COMMAND = Gamepad::Command();
-
 bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
 {
     if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize)!=0))
@@ -20,12 +18,7 @@ bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
     }
 }
 
-bool Gamepad::Command::hasCommand()
-{
-    return (a || b || up || down || left || right || plus || minus || menu || trig || home );
-}
-
-Gamepad::Command Gamepad::getCommand()
+GamepadCommand Gamepad::getCommand()
 {
 #ifdef BLUETOOTH
     if (wiimote.available() > 0) 
