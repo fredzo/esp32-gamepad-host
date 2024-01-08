@@ -2,6 +2,7 @@
 #define ESP32_GAMEPAD_HOST_H
 #include <Arduino.h>
 #include <Gamepad.h>
+#include <GamepadAdapterManager.h>
 #include <Esp32GamepadHostConfig.h>
 
 class Esp32GamepadHost
@@ -36,11 +37,11 @@ class Esp32GamepadHost
         void init(Config config);
         int getGamepadCount();
         Gamepad* getGamepad(int index);
-        GamepadCommand getCommand();
-        GamepadCommand getCommandForGamepad(int idndex);
+        GamepadCommand* getCommand();
+        GamepadCommand* getCommandForGamepad(int idndex);
         void processTasks();
 
-        Gamepad* addGamepad(bd_addr_t address, uint8_t pageScanRepetitionMode, uint16_t clockOffset, uint32_t classOfDevice, Gamepad::State state);
+        Gamepad* addGamepad(bd_addr_t address, Gamepad::State state, uint8_t pageScanRepetitionMode, uint16_t clockOffset = 0, uint16_t vendorId = 0, uint16_t productId = 0, uint32_t classOfDevice = 0);
 
         Gamepad* getGamepadForAddress(bd_addr_t addr);
         Gamepad* getGamepadForChannel(uint16_t channel);
@@ -62,6 +63,8 @@ class Esp32GamepadHost
         int gamepadCount = 0;
         int gamepadIndex = 0;
         Gamepad* connectingGamepad = NULL;
+        // Reference to adapter manager
+        GamepadAdapterManager* adapterManager = NULL;
 
         static Esp32GamepadHost *esp32GamepadHostInstance;
 };

@@ -19,6 +19,7 @@ void Esp32GamepadHost::init()
 }
 void Esp32GamepadHost::init(Config config)
 {
+    adapterManager = GamepadAdapterManager::getGamepadAdapterManager();
     int args[] = {config.maxGamepads};
     xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, args, config.btTaskPriority, NULL, config.btTaskCoreId);
 }
@@ -33,15 +34,15 @@ Gamepad* Esp32GamepadHost::getGamepad(int index)
     return NULL;
 }
 
-GamepadCommand Esp32GamepadHost::getCommandForGamepad(int idndex)
+GamepadCommand* Esp32GamepadHost::getCommandForGamepad(int idndex)
 {
-    GamepadCommand result = GamepadCommand::NO_COMMAND;
+    GamepadCommand* result = NULL;
     return result;
 }
 
-GamepadCommand Esp32GamepadHost::getCommand()
+GamepadCommand* Esp32GamepadHost::getCommand()
 {
-    GamepadCommand result = GamepadCommand::NO_COMMAND;
+    GamepadCommand* result = NULL;
     return result;
 }
 
@@ -50,7 +51,7 @@ void Esp32GamepadHost::processTasks()
     maybeRumble();
 }
 
-Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, uint8_t pageScanRepetitionMode, uint16_t clockOffset, uint32_t classOfDevice, Gamepad::State state)
+Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, uint8_t pageScanRepetitionMode, uint16_t vendorId, uint16_t productId, uint16_t clockOffset, uint32_t classOfDevice)
 {
     Gamepad* gamepad = new Gamepad();
     memcpy(gamepad->address, address, 6);
@@ -59,6 +60,16 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, uint8_t pageScanRepetit
     gamepad->classOfDevice = classOfDevice;
     gamepad->state = state;
     gamepad->index = gamepadIndex;
+    if(vendorId != 0 || productId != 0 || classOfDevice != 0)
+    {   // Try and find an adapter
+        GamepadAdapter* adapter = adapterManager->findAdapter(vendorId,productId,classOfDevice);
+        gamepad->setAdapter(adapter);
+    }
+    else
+    {   // We need a sdp report to get informations about the device
+        // TODO
+    }
+
     gamepads[gamepadIndex] = gamepad;
     if(state == Gamepad::State::CONNECTING && connectingGamepad == NULL)
     {   // New connecting device

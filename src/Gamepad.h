@@ -7,12 +7,15 @@ extern "C" {
 #include <btstack.h>
 }
 
+// Forward declaration for adapter to avoid circular dependency
+class GamepadAdapter;
+
 class Gamepad
 {
     public :
         enum class State { CONNECTION_REQUESTED, CONNECTING, CONNECTED, DISCONNECTED };
 
-        GamepadCommand getCommand();
+        GamepadCommand* getCommand();
 
         // Index of this gamepad in the gamepadHost
         int index;
@@ -37,13 +40,15 @@ class Gamepad
 
         bool parseDataPacket(uint8_t * packet, uint16_t packetSize);
 
+        void setAdapter(GamepadAdapter* adapterParam) { adapter = adapterParam; };
+
 
     private :
         bool logging = false;
         long last_ms = 0;
         int num_run = 0, num_updates = 0;
-        GamepadCommand  currentCommand = GamepadCommand::NO_COMMAND;
-
+        GamepadCommand*  currentCommand = new GamepadCommand();
+        GamepadAdapter*  adapter = NULL;
 
 };
 

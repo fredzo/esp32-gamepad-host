@@ -230,7 +230,7 @@ static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint
     if(connectingGamepad == NULL)
     {
         LOG_INFO("L2CAP channel open event received but no device is currently connecting : adding a new device\n");
-        connectingGamepad = gamepadHost->addGamepad(address,psm,0,CLASS_OF_DEVICE_GAMEPAD_START,Gamepad::State::CONNECTING);
+        connectingGamepad = gamepadHost->addGamepad(address,Gamepad::State::CONNECTING,psm);
     }
 
     LOG_DEBUG("L2CAP_EVENT_INCOMING_CONNECTION (psm=0x%04x, local_cid=0x%04x, "
@@ -369,6 +369,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
     uint8_t   event;
     bd_addr_t event_addr;
     uint8_t   status;
+    uint16_t vendorId;
+    uint16_t productId;
     uint32_t classOfDevice;
     event = hci_event_packet_get_type(packet);
     Gamepad* gamepad;
@@ -413,14 +415,16 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         }
                         else
                         {
+                            vendorId = gap_event_inquiry_result_get_device_id_vendor_id(packet);
+                            productId = gap_event_inquiry_result_get_device_id_product_id(packet);
                             classOfDevice = gap_event_inquiry_result_get_class_of_device(packet);
                             if(classOfDevice >= CLASS_OF_DEVICE_GAMEPAD_START && classOfDevice <= CLASS_OF_DEVICE_GAMEPAD_END)
                             {   // Filter on gamepads
                                 gamepad = gamepadHost->addGamepad(event_addr, 
+                                Gamepad::State::CONNECTION_REQUESTED,
                                 gap_event_inquiry_result_get_page_scan_repetition_mode(packet),
                                 gap_event_inquiry_result_get_clock_offset(packet),
-                                classOfDevice,
-                                Gamepad::State::CONNECTION_REQUESTED);
+                                vendorId,productId,classOfDevice);
 
                                 // print info
                                 LOG_INFO("Device found: %s ",  bd_addr_to_str(event_addr));
@@ -579,7 +583,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                             rumbleBtChanel = channel;
                             shouldRumble = true;
                         }
-
                     }
                 }
                 else

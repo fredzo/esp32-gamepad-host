@@ -39,11 +39,11 @@ void GamepadAdapterManager::registerAdapter(GamepadAdapter* adapter)
     }
 }
 
-GamepadAdapter* GamepadAdapterManager::findAdapter(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice)
+GamepadAdapter* GamepadAdapterManager::findAdapter(uint16_t vendorId, uint16_t productId, uint32_t classOfDevice)
 {
     for(int i = 0 ; i < adapterCount ; i++)
     {
-        if(adapters[i]->match(vendorId,deviceId,classOfDevice))
+        if(adapters[i]->match(vendorId,productId,classOfDevice))
         {
             return adapters[i];
         }

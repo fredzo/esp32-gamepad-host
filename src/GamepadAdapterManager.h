@@ -14,7 +14,7 @@ class GamepadAdapterManager
     public :
         static GamepadAdapterManager *getGamepadAdapterManager();
 
-        GamepadAdapter* findAdapter(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice);
+        GamepadAdapter* findAdapter(uint16_t vendorId, uint16_t productId, uint32_t classOfDevice);
 
     private :
         GamepadAdapter* adapters[GAMEPAD_ADAPTER_NUMBER];
