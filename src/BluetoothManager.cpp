@@ -189,7 +189,7 @@ static void do_connection_requests(void){
     }
 }
 
-void sendOutputReport(Gamepad* gamepad, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
+void bluetoothManagerSendOutputReport(Gamepad* gamepad)
 {
     if(gamepad == NULL)
     {
@@ -599,7 +599,7 @@ void maybeRumble()
         rumbleState = !rumbleState;
         printf("Before Rumble with state %d.\n",rumbleState);
         Gamepad* gamepad = gamepadHost->getGamepadForChannel(rumbleBtChanel);
-        sendOutputReport(gamepad,0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
+        gamepad->sendOutputReport(0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
         printf("After Rumble !\n");
     }
 }
