@@ -7,8 +7,6 @@
 #define CLASS_OF_DEVICE_DS4        0x002508
 
 // From https://github.com/StryderUK/BluetoothHID/blob/main/examples/DualShock4/DS4Controller.h
-
-
 union PS4Buttons {
   struct {
     uint8_t dpad : 4;
@@ -43,6 +41,30 @@ typedef struct {
   uint8_t RT;
 } __attribute__((packed)) DS4Data;
 
+// From https://github.com/ricardoquesada/bluepad32/blob/main/src/components/bluepad32/uni_hid_parser_ds4.c
+typedef struct __attribute((packed)) {
+    uint8_t unk0[2];
+    uint8_t flags;
+    uint8_t unk1[2];
+    uint8_t motorRight;
+    uint8_t motorLeft;
+    uint8_t ledRed;
+    uint8_t ledGreen;
+    uint8_t ledBlue;
+    uint8_t flashLed1;  // time to flash bright (255 = 2.5 seconds)
+    uint8_t flashLed2;  // time to flash dark (255 = 2.5 seconds)
+    uint8_t unk2[61];
+    uint32_t crc32;
+} DS4OutputReport;
+
+// When sending the FF report, which "features" should be set.
+enum {
+    DS4_FF_FLAG_RUMBLE = 1 << 0,
+    DS4_FF_FLAG_LED_COLOR = 1 << 1,
+    DS4_FF_FLAG_LED_BLINK = 1 << 2,
+    DS4_FF_FLAG_BLINK_COLOR_RUMBLE = DS4_FF_FLAG_RUMBLE | DS4_FF_FLAG_LED_COLOR | DS4_FF_FLAG_LED_BLINK,
+};
+
 class DS4Adapter : public GamepadAdapter
 {
     public :
@@ -54,7 +76,7 @@ class DS4Adapter : public GamepadAdapter
         };
 
 
-        virtual void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
+        void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             if(packetSize >= 2)
             {
@@ -91,7 +113,16 @@ class DS4Adapter : public GamepadAdapter
                     LOG_HEXDUMP(packet,packetSize);
                 }
             }
-        }
+        };
+
+        void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)
+        {
+            DS4OutputReport report;
+            report.flags = DS4_FF_FLAG_RUMBLE;
+            report.motorLeft = left;
+            report.motorRight = right;
+            gamepad->sendOutputReport(0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
+        };
 };
 
 #endif 

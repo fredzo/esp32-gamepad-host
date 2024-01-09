@@ -38,6 +38,19 @@ void Gamepad::connectionComplete()
     }
 }
 
+void Gamepad::setRumble(uint8_t left, uint8_t right)
+{
+    if(adapter)
+    {
+        adapter->setRumble(this,left,right);
+    }
+    else
+    {
+        LOG_INFO("No adapter, rumple impossible for gamepad #%d:\n",index);
+    }
+}
+
+
 void Gamepad::sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t reportLength)
 {
     if(state != Gamepad::State::CONNECTED)

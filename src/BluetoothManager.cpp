@@ -606,7 +606,9 @@ void maybeRumble()
         rumbleState = !rumbleState;
         printf("Before Rumble with state %d.\n",rumbleState);
         Gamepad* gamepad = gamepadHost->getGamepadForChannel(rumbleBtChanel);
-        gamepad->sendOutputReport(0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
+        //gamepad->sendOutputReport(0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
+        uint8_t rumbleValue = rumbleState ? 0xFF : 0x00;
+        gamepad->setRumble(rumbleValue,rumbleValue);
         printf("After Rumble !\n");
     }
 }

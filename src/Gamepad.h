@@ -16,6 +16,7 @@ class Gamepad
         enum class State { CONNECTION_REQUESTED, CONNECTING, CONNECTED, DISCONNECTED };
 
         GamepadCommand* getCommand();
+        void setRumble(uint8_t left, uint8_t right);
 
         // Index of this gamepad in the gamepadHost
         int index;
@@ -36,7 +37,7 @@ class Gamepad
         uint8_t            lastPacket[MAX_BT_DATA_SIZE];
 
         // Bluetooth state
-        State              state; 
+        State              state;
 
         bool parseDataPacket(uint8_t * packet, uint16_t packetSize);
 
