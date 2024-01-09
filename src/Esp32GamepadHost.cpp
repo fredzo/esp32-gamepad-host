@@ -51,7 +51,7 @@ void Esp32GamepadHost::processTasks()
     maybeRumble();
 }
 
-Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, uint8_t pageScanRepetitionMode, uint16_t vendorId, uint16_t productId, uint16_t clockOffset, uint32_t classOfDevice)
+Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, uint32_t classOfDevice, uint16_t vendorId, uint16_t productId, uint8_t pageScanRepetitionMode, uint16_t clockOffset)
 {
     Gamepad* gamepad = new Gamepad();
     memcpy(gamepad->address, address, 6);

@@ -222,7 +222,7 @@ static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint
     if(connectingGamepad == NULL)
     {
         LOG_INFO("L2CAP channel open event received but no device is currently connecting : adding a new device\n");
-        connectingGamepad = gamepadHost->addGamepad(address,Gamepad::State::CONNECTING,psm);
+        connectingGamepad = gamepadHost->addGamepad(address,Gamepad::State::CONNECTING);
     }
 
     LOG_DEBUG("L2CAP_EVENT_INCOMING_CONNECTION (psm=0x%04x, local_cid=0x%04x, "
@@ -250,11 +250,11 @@ static void on_l2cap_channel_closed(uint16_t channel, uint8_t* packet, int16_t s
 
     local_cid = l2cap_event_channel_closed_get_local_cid(packet);
     LOG_DEBUG("L2CAP_EVENT_CHANNEL_CLOSED: 0x%04x (channel=0x%04x)\n", local_cid, channel);
-    Gamepad* connectingGamepad = gamepadHost->getGamepadForChannel(channel);
-    if(connectingGamepad != NULL)
+    Gamepad* gamepad = gamepadHost->getGamepadForChannel(channel);
+    if(gamepad != NULL)
     {
-        LOG_INFO("Device with index %d disconnected.\n", connectingGamepad->index);
-        connectingGamepad->state = Gamepad::State::DISCONNECTED;
+        LOG_INFO("Device with index %d disconnected.\n", gamepad->index);
+        gamepad->state = Gamepad::State::DISCONNECTED;
         if(!gamepadHost->hasConnectedGamepad())
         {
             bluetoothState = READY;
@@ -406,13 +406,15 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                             {   // Filter on gamepads
                                 gamepad = gamepadHost->addGamepad(event_addr, 
                                 Gamepad::State::CONNECTION_REQUESTED,
+                                classOfDevice,vendorId,productId,
                                 gap_event_inquiry_result_get_page_scan_repetition_mode(packet),
-                                gap_event_inquiry_result_get_clock_offset(packet),
-                                vendorId,productId,classOfDevice);
+                                gap_event_inquiry_result_get_clock_offset(packet));
 
                                 // print info
                                 LOG_INFO("Device found: %s ",  bd_addr_to_str(event_addr));
                                 LOG_INFO("with COD: 0x%06x, ", (unsigned int) classOfDevice);
+                                LOG_INFO("vendorId: 0x%04x, ", vendorId);
+                                LOG_INFO("productId: 0x%04x, ", productId);
                                 LOG_INFO("pageScan %d, ",      gamepad->pageScanRepetitionMode);
                                 LOG_INFO("clock offset 0x%04x",gamepad->clockOffset);
                                 if (gap_event_inquiry_result_get_rssi_available(packet)){
@@ -477,7 +479,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     {
                         uint16_t opcode = hci_event_command_complete_get_command_opcode(packet);
                         const uint8_t* param = hci_event_command_complete_get_return_parameters(packet);
-                        
                         status = param[0];
                         LOG_DEBUG("--> HCI_EVENT_COMMAND_COMPLETE: opcode = 0x%04x - status=%d\n", opcode, status);
                         break;
@@ -495,10 +496,16 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         break;
 
                     case HCI_EVENT_CONNECTION_REQUEST:
-                    {
-                        LOG_DEBUG("--> HCI_EVENT_CONNECTION_REQUEST: link_type = %d <--\n", hci_event_connection_request_get_link_type(packet));
+                    {   // Incomming connection
                         hci_event_connection_request_get_bd_addr(packet, event_addr);
-                        hci_event_connection_request_get_class_of_device(packet);
+                        classOfDevice = hci_event_connection_request_get_class_of_device(packet);
+                        LOG_DEBUG("--> HCI_EVENT_CONNECTION_REQUEST: link_type = %d, classOfDeviced = 0x%06x <--\n", hci_event_connection_request_get_link_type(packet),classOfDevice);
+                        Gamepad* connectingGamepad = gamepadHost->getConnectingGamepad();
+                        if(connectingGamepad == NULL)
+                        {   // Create the gamepad and store class of device
+                            LOG_INFO("HCI Connection request received but no device is currently connecting : adding a new device\n");
+                            connectingGamepad = gamepadHost->addGamepad(event_addr,Gamepad::State::CONNECTING,classOfDevice);
+                        }
                         break;
                     }
 

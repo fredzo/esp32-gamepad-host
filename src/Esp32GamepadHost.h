@@ -5,6 +5,8 @@
 #include <GamepadAdapterManager.h>
 #include <Esp32GamepadHostConfig.h>
 
+#define CLASS_OF_DEVICE_UNKNOWN 0
+
 class Esp32GamepadHost
 {
     public :
@@ -41,7 +43,7 @@ class Esp32GamepadHost
         GamepadCommand* getCommandForGamepad(int idndex);
         void processTasks();
 
-        Gamepad* addGamepad(bd_addr_t address, Gamepad::State state, uint8_t pageScanRepetitionMode, uint16_t clockOffset = 0, uint16_t vendorId = 0, uint16_t productId = 0, uint32_t classOfDevice = 0);
+        Gamepad* addGamepad(bd_addr_t address, Gamepad::State state, uint32_t classOfDevice = CLASS_OF_DEVICE_UNKNOWN, uint16_t vendorId = 0, uint16_t productId = 0, uint8_t pageScanRepetitionMode = 0, uint16_t clockOffset = 0);
 
         Gamepad* getGamepadForAddress(bd_addr_t addr);
         Gamepad* getGamepadForChannel(uint16_t channel);
