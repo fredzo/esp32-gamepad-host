@@ -196,14 +196,6 @@ void sendOutputReport(Gamepad* gamepad, uint8_t reportId, const uint8_t * report
         LOG_ERROR("ERROR : sendOutputReport gamepad must not be NULL.\n");
         return;
     }
-    if(gamepad->state != Gamepad::State::CONNECTED)
-    {
-        LOG_ERROR("ERROR : Invalid device state for device with index %d.\n", gamepad->index);
-        return;
-    }
-    gamepad->reportId = reportId;
-    memcpy(gamepad->report, report, reportLength);
-    gamepad->reportLength = reportLength;
     uint8_t result = l2cap_request_can_send_now_event(gamepad->l2capHidInterruptCid);
     if(result)
     {
@@ -343,16 +335,8 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
             LOG_INFO("L2CAP interrupt channel open for deviceIndex %d, connection complete.\n",connectingGamepad->index);
             connectingGamepad->l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
             // Connection successfull
-            connectingGamepad->state = Gamepad::State::CONNECTED;
             bluetoothState = CONNECTED;
-            if(connectingGamepad->classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
-            {   // TODO : Move this code to wiimote driver
-                uint8_t leds = 0b0001;
-                uint8_t payload[1];
-                payload[0] = (uint8_t)(leds << 4);
-                sendOutputReport(connectingGamepad,0x11,payload,1);
-            }
-            gamepadHost->finishConnectingGamepad();
+            gamepadHost->completeConnection(connectingGamepad);
             // Check for other connections
             do_connection_requests();
             break;
@@ -600,7 +584,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 
 /*************************************************************************************************/
 
-void btstackRun(void)
+void bluetoothManagerRun(void)
 {
     btstack_run_loop_execute();
 }
@@ -628,7 +612,7 @@ void configuration_customizer(esp_bt_controller_config_t *cfg)
 
 /*************************************************************************************************/
 
-int btstackInit(int maxConnections)
+int bluetoothManagerInit(int maxConnections)
 {   // Store max copnnections param
     btStackMaxConnections = maxConnections;
     

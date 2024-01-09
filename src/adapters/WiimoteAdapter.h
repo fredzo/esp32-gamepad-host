@@ -34,7 +34,7 @@ class WiimoteAdapter : public GamepadAdapter
         };
 
 
-        virtual void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
+        void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             if(packetSize >= 4)
             {   // TODO handle extended reports (nunshuck)
@@ -60,6 +60,15 @@ class WiimoteAdapter : public GamepadAdapter
                 LOG_ERROR("Wrong packet size for Wiimote : %d\n",packetSize);
                 LOG_HEXDUMP(packet,packetSize);
             }
+        }
+
+        void connectionComplete(Gamepad* gamepad)
+        {   // Send report to light the player led on the wiimote
+            int playerNumber = (gamepad->index) % 4;
+            uint8_t leds = 0b0001 << playerNumber;
+            uint8_t payload[1];
+            payload[0] = (uint8_t)(leds << 4);
+            gamepad->sendOutputReport(0x11,payload,1);
         }
 };
 

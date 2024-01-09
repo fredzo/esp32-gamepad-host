@@ -9,8 +9,8 @@ void btTask(void* args)
 {
     int maxGamepads = ((int *)args)[0];
     LOG_INFO("Esp32GamepadHost bluetooth task running on core %d\n",xPortGetCoreID());
-    btstackInit(maxGamepads+1); // We need to conenxions per gamepad + 1 for gap inquiery
-    btstackRun();
+    bluetoothManagerInit(maxGamepads+1); // We need to conenxions per gamepad + 1 for gap inquiery
+    bluetoothManagerRun();
 }
 
 void Esp32GamepadHost::init()
@@ -85,6 +85,12 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
         gamepadCount++;
     }
     return gamepad;
+}
+
+void  Esp32GamepadHost::completeConnection(Gamepad* gamepad) 
+{   // Connection successfull
+    gamepad->connectionComplete();
+    connectingGamepad = NULL; 
 }
 
 

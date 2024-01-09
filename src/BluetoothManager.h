@@ -1,13 +1,12 @@
 
-/* Include Guard */
-
 #ifndef BLUETOOTH_MANAGER_H
 #define BLUETOOTH_MANAGER_H
 
 /* Functions */
 
-int btstackInit(int maxConnections);
-void btstackRun();
+int bluetoothManagerInit(int maxConnections);
+void bluetoothManagerRun();
+void bluetoothManagerSendOutputReport(Gamepad* gamepad);
 void maybeRumble();
 
 #endif

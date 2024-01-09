@@ -13,6 +13,8 @@ class GamepadAdapter
         virtual const char* getName() = 0;
         virtual bool match(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice) = 0;
         virtual void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize) = 0;
+        virtual void connectionComplete(Gamepad* gamepad);
+
 };
 
 #endif 

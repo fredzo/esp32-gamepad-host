@@ -1,5 +1,7 @@
 #include <Gamepad.h>
 #include <GamepadAdapter.h>
+#include <Esp32GamepadHostConfig.h>
+#include <BluetoothManager.h>
 
 
 bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
@@ -24,6 +26,34 @@ bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
     {
         return false;
     }
+}
+
+// Called on connection complete
+void Gamepad::connectionComplete()
+{
+    state = Gamepad::State::CONNECTED;
+    if(adapter)
+    {
+        adapter->connectionComplete(this);
+    }
+}
+
+void Gamepad::sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t reportLength)
+{
+    if(state != Gamepad::State::CONNECTED)
+    {
+        LOG_ERROR("ERROR : Invalid device state for device with index %d.\n", index);
+        return;
+    }
+    if(reportLength > MAX_BT_DATA_SIZE)
+    {
+        LOG_ERROR("ERROR : Invalid report length %d, max length is %d.\n", reportLength, MAX_BT_DATA_SIZE);
+        return;
+    }
+    this->reportId = reportId;
+    memcpy(this->report, report, reportLength);
+    this->reportLength = reportLength;
+    bluetoothManagerSendOutputReport(this);
 }
 
 GamepadCommand* Gamepad::getCommand()

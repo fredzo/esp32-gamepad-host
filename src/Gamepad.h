@@ -42,6 +42,9 @@ class Gamepad
 
         void setAdapter(GamepadAdapter* adapterParam) { adapter = adapterParam; };
 
+        void connectionComplete();
+
+        void sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t reportLength);
 
     private :
         bool logging = false;
