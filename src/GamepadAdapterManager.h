@@ -4,9 +4,6 @@
 #include <GamepadAdapter.h>
 #include <Esp32GamepadHostConfig.h>
 
-// Adapters
-#include <adapters/WiimoteAdapter.h>
-
 #define GAMEPAD_ADAPTER_NUMBER  2
 
 class GamepadAdapterManager

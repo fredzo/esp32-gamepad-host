@@ -1,6 +1,10 @@
 #include <GamepadAdapterManager.h>
 #include <Esp32GamepadHostConfig.h>
 
+// Adapters
+#include <adapters/WiimoteAdapter.h>
+#include <adapters/DS4Adapter.h>
+
 
 GamepadAdapterManager* GamepadAdapterManager::gamepadAdapterManager = nullptr;
 
@@ -15,6 +19,7 @@ GamepadAdapterManager *GamepadAdapterManager::getGamepadAdapterManager()
 GamepadAdapterManager::GamepadAdapterManager()
 {   // Register adapters
     registerAdapter(new WiimoteAdapter());
+    registerAdapter(new DS4Adapter());
 };
 
 GamepadAdapterManager::~GamepadAdapterManager()
@@ -30,7 +35,7 @@ void GamepadAdapterManager::registerAdapter(GamepadAdapter* adapter)
 {
     if(adapterCount<GAMEPAD_ADAPTER_NUMBER)
     {
-        adapters[adapterCount] = new WiimoteAdapter();
+        adapters[adapterCount] = adapter;
         adapterCount++;
     }
     else

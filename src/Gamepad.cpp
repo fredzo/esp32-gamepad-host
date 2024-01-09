@@ -13,7 +13,7 @@ bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
         }
         else
         {
-            LOG_INFO("No adapter for packet: ");
+            LOG_INFO("No adapter for packet:\n");
             LOG_HEXDUMP(packet,packetSize);
         }
         // Store packet content to last packet
