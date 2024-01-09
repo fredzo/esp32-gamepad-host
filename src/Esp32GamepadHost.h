@@ -47,7 +47,7 @@ class Esp32GamepadHost
         Gamepad* getGamepadForChannel(uint16_t channel);
         Gamepad* getConnectingGamepad() { return connectingGamepad; };
         Gamepad* askGamepadConnection();
-        void     completeConnection(Gamepad* gamepad) { connectingGamepad = NULL; };
+        void     completeConnection(Gamepad* gamepad);
         bool     hasConnectedGamepad();
 
     private :
