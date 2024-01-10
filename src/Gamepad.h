@@ -12,6 +12,9 @@ class GamepadAdapter;
 
 #define UNDEFINED_ADAPTER_NAME      "Undefined Gamepad"
 
+// Report header four output reports
+#define OUTPUT_REPORT_HEADER        ((HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT)
+
 struct GamepadColor {
     uint8_t red;    
     uint8_t green;    
@@ -26,6 +29,7 @@ struct GamepadColor {
 class Gamepad
 {
     public :
+        enum ReportType { R_NONE, R_INTERRUPT, R_CONTROL};
         enum class State { CONNECTION_REQUESTED, CONNECTING, CONNECTED, DISCONNECTED };
         static const GamepadColor PURPLE;
         static const GamepadColor CYAN;
@@ -51,9 +55,11 @@ class Gamepad
         uint16_t           l2capHidControlCid;
         uint16_t           l2capHidInterruptCid;
         // Four output reports
+        ReportType         reportType;
+        uint8_t            reportHeader;
         uint8_t            reportId;
         uint8_t            report[MAX_BT_DATA_SIZE];
-        uint16_t           reportLength;
+        uint16_t           reportLength = -1;
 
         // For data packet history
         uint8_t            lastPacket[MAX_BT_DATA_SIZE];
@@ -67,7 +73,7 @@ class Gamepad
 
         void connectionComplete();
 
-        void sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t reportLength);
+        void sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report, uint8_t reportLength);
 
         String getName();
         

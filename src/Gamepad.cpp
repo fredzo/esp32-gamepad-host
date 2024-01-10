@@ -93,7 +93,7 @@ void Gamepad::setPlayer(uint8_t playerNumber)
 }
 
 
-void Gamepad::sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t reportLength)
+void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
 {
     if(state != Gamepad::State::CONNECTED)
     {
@@ -105,10 +105,12 @@ void Gamepad::sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t
         LOG_ERROR("ERROR : Invalid report length %d, max length is %d for gamepad %s.\n", reportLength, MAX_BT_DATA_SIZE, toString().c_str());
         return;
     }
+    this->reportType = type;
+    this->reportHeader = header;
     this->reportId = reportId;
-    memcpy(this->report, report, reportLength);
+    if(report && (reportLength > 0)) memcpy(this->report, report, reportLength);
     this->reportLength = reportLength;
-    bluetoothManagerSendOutputReport(this);
+    bluetoothManagerSendReport(this);
 }
 
 GamepadCommand* Gamepad::getCommand()

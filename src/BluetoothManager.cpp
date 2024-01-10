@@ -159,14 +159,14 @@ static void do_connection_requests(void){
     }
 }
 
-void bluetoothManagerSendOutputReport(Gamepad* gamepad)
+void bluetoothManagerSendReport(Gamepad* gamepad)
 {
     if(gamepad == NULL)
     {
         LOG_ERROR("ERROR : sendOutputReport gamepad must not be NULL.\n");
         return;
     }
-    uint8_t result = l2cap_request_can_send_now_event(gamepad->l2capHidInterruptCid);
+    uint8_t result = l2cap_request_can_send_now_event(gamepad->reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
     if(result)
     {
         LOG_ERROR("ERROR while asking send now event : %04x.\n", result);
@@ -510,19 +510,19 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         {
                             LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no device found.\n",channel);
                         }
-                        if(gamepad->reportLength <= 0)
+                        if(gamepad->reportType == Gamepad::ReportType::R_NONE)
                         {
                             LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
                         LOG_INFO("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
-                        uint8_t header = (HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT;
                         l2cap_reserve_packet_buffer();
                         uint8_t * out_buffer = l2cap_get_outgoing_buffer();
-                        out_buffer[0] = header;
+                        out_buffer[0] = gamepad->reportHeader;
                         out_buffer[1] = gamepad->reportId;
-                        memcpy(out_buffer + 2, gamepad->report, gamepad->reportLength);
-                        l2cap_send_prepared(gamepad->l2capHidInterruptCid, gamepad->reportLength + 2);
+                        if(gamepad->report && (gamepad->reportLength>0)) memcpy(out_buffer + 2, gamepad->report, gamepad->reportLength);
+                        l2cap_send_prepared(channel,gamepad->reportLength + 2);
                         gamepad->reportLength = 0;
+                        gamepad->reportType = Gamepad::ReportType::R_NONE;
                         break;
                     }
 

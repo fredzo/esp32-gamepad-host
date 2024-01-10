@@ -68,7 +68,7 @@ class WiimoteAdapter : public GamepadAdapter
             uint8_t leds = 0b0001 << playerNumber;
             uint8_t payload[1];
             payload[0] = (uint8_t)(leds << 4);
-            gamepad->sendOutputReport(0x11,payload,1);
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,0x11,payload,1);
         }
 };
 

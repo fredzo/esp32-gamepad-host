@@ -124,7 +124,7 @@ class DS4Adapter : public GamepadAdapter
             report.ledRed = gamepad->color.red;
             report.ledGreen = gamepad->color.green;
             report.ledBlue = gamepad->color.blue;
-            gamepad->sendOutputReport(0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
         };
 
         void setLed(Gamepad* gamepad, GamepadColor color)
@@ -136,7 +136,7 @@ class DS4Adapter : public GamepadAdapter
             report.ledRed = color.red;
             report.ledGreen = color.green;
             report.ledBlue = color.blue;
-            gamepad->sendOutputReport(0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
         };
 };
 
