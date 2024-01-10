@@ -11,6 +11,12 @@ const GamepadColor Gamepad::BLUE   = GamepadColor(0x00,0x00,0xFF);
 const GamepadColor Gamepad::YELLOW = GamepadColor(0xFF,0xFF,0x00);
 const GamepadColor Gamepad::WHITE  = GamepadColor(0xFF,0xFF,0xFF);
 
+void Gamepad::setAdapter(GamepadAdapter * adapter)
+{
+    this->adapter = adapter;
+    updateName();
+}
+
 bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
 {
     if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize)!=0))
@@ -108,4 +114,27 @@ void Gamepad::sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t
 GamepadCommand* Gamepad::getCommand()
 {
     return currentCommand;
+}
+
+void Gamepad::updateName()
+{
+    if(adapter)
+    {
+        name = adapter->getName();
+    }
+    else
+    {
+        name = UNDEFINED_ADAPTER_NAME;
+    }
+    name = "#" + index + " - " + name;
+}
+
+String Gamepad::getName()
+{
+    return name;
+}
+
+String Gamepad::toString()
+{
+
 }

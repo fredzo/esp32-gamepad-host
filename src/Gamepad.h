@@ -10,6 +10,8 @@ extern "C" {
 // Forward declaration for adapter to avoid circular dependency
 class GamepadAdapter;
 
+#define UNDEFINED_ADAPTER_NAME      "Undefined Gamepad"
+
 struct GamepadColor {
     uint8_t red;    
     uint8_t green;    
@@ -61,11 +63,16 @@ class Gamepad
 
         bool parseDataPacket(uint8_t * packet, uint16_t packetSize);
 
-        void setAdapter(GamepadAdapter* adapterParam) { adapter = adapterParam; };
+        void setAdapter(GamepadAdapter* adapter);
 
         void connectionComplete();
 
         void sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t reportLength);
+
+        String getName();
+        
+        String toString();
+
 
         // Led color
         GamepadColor       color = PURPLE;
@@ -76,6 +83,10 @@ class Gamepad
     private :
         GamepadCommand*  currentCommand = new GamepadCommand();
         GamepadAdapter*  adapter = NULL;
+        String           name = UNDEFINED_ADAPTER_NAME;
+        void updateName();
+
+    friend class Esp32GamepadHost;
 
 };
 
