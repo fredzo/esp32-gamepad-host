@@ -118,9 +118,24 @@ class DS4Adapter : public GamepadAdapter
         void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)
         {
             DS4OutputReport report;
-            report.flags = DS4_FF_FLAG_RUMBLE;
+            report.flags = DS4_FF_FLAG_BLINK_COLOR_RUMBLE; // Rumble only mode not supported
             report.motorLeft = left;
             report.motorRight = right;
+            report.ledRed = gamepad->color.red;
+            report.ledGreen = gamepad->color.green;
+            report.ledBlue = gamepad->color.blue;
+            gamepad->sendOutputReport(0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
+        };
+
+        void setLed(Gamepad* gamepad, GamepadColor color)
+        {
+            DS4OutputReport report;
+            report.flags = DS4_FF_FLAG_BLINK_COLOR_RUMBLE; // Color only mode not supported
+            report.motorLeft = gamepad->rumbleLeft;
+            report.motorRight = gamepad->rumbleRight;
+            report.ledRed = color.red;
+            report.ledGreen = color.green;
+            report.ledBlue = color.blue;
             gamepad->sendOutputReport(0x11,(uint8_t*)&report,sizeof(DS4OutputReport));
         };
 };

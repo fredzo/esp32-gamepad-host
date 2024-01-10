@@ -62,9 +62,9 @@ class WiimoteAdapter : public GamepadAdapter
             }
         }
 
-        void connectionComplete(Gamepad* gamepad)
+        void setPlayer(Gamepad* gamepad, uint8_t playerNumber)
         {   // Send report to light the player led on the wiimote
-            int playerNumber = (gamepad->index) % 4;
+            playerNumber = playerNumber % 4;
             uint8_t leds = 0b0001 << playerNumber;
             uint8_t payload[1];
             payload[0] = (uint8_t)(leds << 4);
