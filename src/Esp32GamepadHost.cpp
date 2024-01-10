@@ -60,15 +60,17 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
     gamepad->classOfDevice = classOfDevice;
     gamepad->state = state;
     gamepad->index = gamepadIndex;
-    // Update the name with the index
-    gamepad->updateName();
     if(vendorId != 0 || productId != 0 || classOfDevice != 0)
     {   // Try and find an adapter
         GamepadAdapter* adapter = adapterManager->findAdapter(vendorId,productId,classOfDevice);
+        // Set adapter alse updates the name
         gamepad->setAdapter(adapter);
     }
     else
-    {   // We need a sdp report to get informations about the device
+    {
+        // Update the name with the index
+        gamepad->updateName();
+        // We need a sdp report to get informations about the device
         // TODO
     }
 

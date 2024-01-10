@@ -223,10 +223,10 @@ static void on_l2cap_channel_closed(uint16_t channel, uint8_t* packet, int16_t s
     Gamepad* gamepad = gamepadHost->getGamepadForChannel(channel);
     if(gamepad != NULL)
     {
-        LOG_INFO("Device with index %d disconnected.\n", gamepad->index);
         gamepad->state = Gamepad::State::DISCONNECTED;
+        LOG_INFO("Gamepad disconnected: %s.\n", gamepad->toString().c_str());
         if(!gamepadHost->hasConnectedGamepad())
-        {
+        {   // No more gampads connected => go back to ready state
             bluetoothState = READY;
         }
     }
@@ -302,11 +302,11 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
             break;
 
         case PSM_HID_INTERRUPT:
-            LOG_INFO("L2CAP interrupt channel open for deviceIndex %d, connection complete.\n",connectingGamepad->index);
             connectingGamepad->l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
             // Connection successfull
             bluetoothState = CONNECTED;
             gamepadHost->completeConnection(connectingGamepad);
+            LOG_INFO("L2CAP interrupt channel open : connection complete fore gamepad %s.\n",connectingGamepad->toString().c_str());
             // Check for other connections
             do_connection_requests();
             break;
@@ -514,7 +514,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         {
                             LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
-                        LOG_INFO("Sending output report of length %d for device index %d.\n",gamepad->reportLength,gamepad->index);
+                        LOG_INFO("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().cstr());
                         uint8_t header = (HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT;
                         l2cap_reserve_packet_buffer();
                         uint8_t * out_buffer = l2cap_get_outgoing_buffer();

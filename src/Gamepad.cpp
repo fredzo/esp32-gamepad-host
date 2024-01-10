@@ -28,7 +28,7 @@ bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
         }
         else
         {
-            LOG_INFO("No adapter for packet:\n");
+            LOG_INFO("No adapter for gamepad %s and packet:\n", toString().c_str());
             LOG_HEXDUMP(packet,packetSize);
         }
         // Store packet content to last packet
@@ -55,28 +55,28 @@ void Gamepad::setRumble(uint8_t left, uint8_t right)
 {
     this->rumbleLeft = left;
     this->rumbleRight = right;
-    LOG_INFO("Setting rumble to (0x%02X,0x%02X) for gamepad #%d.\n",left,right,index);
+    LOG_INFO("Setting rumble to (0x%02X,0x%02X) for gamepad %s.\n",left,right,index,toString().c_str());
     if(adapter)
     {
         adapter->setRumble(this,left,right);
     }
     else
     {
-        LOG_ERROR("No adapter, setRumple() impossible for gamepad #%d:\n",index);
+        LOG_ERROR("No adapter, setRumple() impossible for gamepad %s.\n", toString().c_str());
     }
 }
 
 void Gamepad::setLed(GamepadColor color)
 {
     this->color = color;
-    LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%2X) for gamepad #%d.\n",this->color.red,this->color.green,this->color.blue,index);
+    LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%2X) for gamepad for gamepad %s.\n",this->color.red,this->color.green,this->color.blue,toString().c_str());
     if(adapter)
     {
         adapter->setLed(this,color);
     }
     else
     {
-        LOG_ERROR("No adapter, setLed() impossible for gamepad #%d:\n",index);
+        LOG_ERROR("No adapter, setLed() impossible for gamepad %s.\n", toString().c_str());
     }
 }
 
@@ -88,7 +88,7 @@ void Gamepad::setPlayer(uint8_t playerNumber)
     }
     else
     {
-        LOG_ERROR("No adapter, setPlayer() impossible for gamepad #%d:\n",index);
+        LOG_ERROR("No adapter, setPlayer() impossible for gamepad %s.\n", toString().c_str());
     }
 }
 
@@ -97,12 +97,12 @@ void Gamepad::sendOutputReport(uint8_t reportId, const uint8_t * report, uint8_t
 {
     if(state != Gamepad::State::CONNECTED)
     {
-        LOG_ERROR("ERROR : Invalid device state for device with index %d.\n", index);
+        LOG_ERROR("ERROR : Invalid device state for gamepad %s.\n", toString().c_str());
         return;
     }
     if(reportLength > MAX_BT_DATA_SIZE)
     {
-        LOG_ERROR("ERROR : Invalid report length %d, max length is %d.\n", reportLength, MAX_BT_DATA_SIZE);
+        LOG_ERROR("ERROR : Invalid report length %d, max length is %d for gamepad %s.\n", reportLength, MAX_BT_DATA_SIZE, toString().c_str());
         return;
     }
     this->reportId = reportId;
@@ -126,7 +126,7 @@ void Gamepad::updateName()
     {
         name = UNDEFINED_ADAPTER_NAME;
     }
-    name = "#" + index + " - " + name;
+    name = "#" + String(index) + " - " + name;
 }
 
 String Gamepad::getName()
@@ -136,5 +136,7 @@ String Gamepad::getName()
 
 String Gamepad::toString()
 {
-
+    char buffer[128];
+    sprintf(buffer,"%s [%s,%s,led(0X%02X,0X%02X,0X%02X),rumble(0X%02X,0X%02X)]",name,bd_addr_to_str(address),state == State::CONNECTED ? "connected" : state == State::DISCONNECTED ? "disconnected" : "connecting", color.red, color.green, color.blue, rumbleLeft,rumbleRight);
+    return String(buffer);
 }
