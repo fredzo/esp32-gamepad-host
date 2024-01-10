@@ -514,7 +514,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         {
                             LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
-                        LOG_INFO("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().cstr());
+                        LOG_INFO("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
                         uint8_t header = (HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT;
                         l2cap_reserve_packet_buffer();
                         uint8_t * out_buffer = l2cap_get_outgoing_buffer();

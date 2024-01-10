@@ -55,7 +55,7 @@ void Gamepad::setRumble(uint8_t left, uint8_t right)
 {
     this->rumbleLeft = left;
     this->rumbleRight = right;
-    LOG_INFO("Setting rumble to (0x%02X,0x%02X) for gamepad %s.\n",left,right,index,toString().c_str());
+    LOG_INFO("Setting rumble to (0x%02X,0x%02X) for gamepad %s.\n",left,right,toString().c_str());
     if(adapter)
     {
         adapter->setRumble(this,left,right);
@@ -69,7 +69,7 @@ void Gamepad::setRumble(uint8_t left, uint8_t right)
 void Gamepad::setLed(GamepadColor color)
 {
     this->color = color;
-    LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%2X) for gamepad for gamepad %s.\n",this->color.red,this->color.green,this->color.blue,toString().c_str());
+    LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%02X) for gamepad for gamepad %s.\n",this->color.red,this->color.green,this->color.blue,toString().c_str());
     if(adapter)
     {
         adapter->setLed(this,color);
@@ -137,6 +137,6 @@ String Gamepad::getName()
 String Gamepad::toString()
 {
     char buffer[128];
-    sprintf(buffer,"%s [%s,%s,led(0X%02X,0X%02X,0X%02X),rumble(0X%02X,0X%02X)]",name,bd_addr_to_str(address),state == State::CONNECTED ? "connected" : state == State::DISCONNECTED ? "disconnected" : "connecting", color.red, color.green, color.blue, rumbleLeft,rumbleRight);
+    sprintf(buffer,"%s [%s,%s,led(0X%02X,0X%02X,0X%02X),rumble(0X%02X,0X%02X)]",name.c_str(),bd_addr_to_str(address),state == State::CONNECTED ? "connected" : state == State::DISCONNECTED ? "disconnected" : "connecting", color.red, color.green, color.blue, rumbleLeft,rumbleRight);
     return String(buffer);
 }
