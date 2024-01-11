@@ -10,10 +10,12 @@ extern "C" {
 // Forward declaration for adapter to avoid circular dependency
 class GamepadAdapter;
 
-#define UNDEFINED_ADAPTER_NAME      "Undefined Gamepad"
+#define UNDEFINED_ADAPTER_NAME          "Undefined Gamepad"
 
 // Report header four output reports
-#define OUTPUT_REPORT_HEADER        ((HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT)
+#define OUTPUT_REPORT_HEADER            ((HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT)
+// Report header for feature report request
+#define FEATURE_REPORT_REQUEST_HEADER   ((HID_MESSAGE_TYPE_GET_REPORT << 4) | HID_REPORT_TYPE_FEATURE)
 
 struct GamepadColor {
     uint8_t red;    
@@ -59,7 +61,7 @@ class Gamepad
         uint8_t            reportHeader;
         uint8_t            reportId;
         uint8_t            report[MAX_BT_DATA_SIZE];
-        uint16_t           reportLength = -1;
+        uint16_t           reportLength;
 
         // For data packet history
         uint8_t            lastPacket[MAX_BT_DATA_SIZE];
@@ -67,13 +69,16 @@ class Gamepad
         // Bluetooth state
         State              state;
 
+        // State for gamepad adapter state macine
+        uint8_t            adapterState = 0;
+
         bool parseDataPacket(uint8_t * packet, uint16_t packetSize);
 
         void setAdapter(GamepadAdapter* adapter);
 
         void connectionComplete();
 
-        void sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report, uint8_t reportLength);
+        void sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report = NULL, uint8_t reportLength = 0);
 
         String getName();
         

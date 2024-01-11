@@ -24,7 +24,7 @@ class GamepadCommand {
         bool hasCommand();
         void clearCommand();
         bool buttons[BUTTONS_NUMBER];
-        int32_t axes[AXES_NUMBER];
+        int16_t axes[AXES_NUMBER];
         uint16_t triggers[TRIGGERS_NUMBER];
         void hatToDpad(uint8_t hat);
         Gamepad* getGamepad();

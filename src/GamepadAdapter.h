@@ -9,6 +9,8 @@
 
 #define MAX_PLAYERS             6
 
+#define UINT8_TO_INT(value)     value - 0x7F            
+
 class GamepadAdapter
 {
     public :
