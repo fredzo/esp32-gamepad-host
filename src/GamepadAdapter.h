@@ -7,15 +7,11 @@
 
 #define GAMEPAD_ADAPTER_NUMBER  2
 
-#define MAX_PLAYERS             6
-
 #define UINT8_TO_INT(value)     value - 0x7F            
 
 class GamepadAdapter
 {
     public :
-        const static GamepadColor PLAYER_COLORS[MAX_PLAYERS];
-
         virtual const char* getName() = 0;
         virtual bool match(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice) = 0;
         virtual void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize) = 0;

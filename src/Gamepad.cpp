@@ -11,6 +11,17 @@ const GamepadColor Gamepad::BLUE   = GamepadColor(0x00,0x00,0xFF);
 const GamepadColor Gamepad::YELLOW = GamepadColor(0xFF,0xFF,0x00);
 const GamepadColor Gamepad::WHITE  = GamepadColor(0xFF,0xFF,0xFF);
 
+const GamepadColor Gamepad::PLAYER_COLORS[] = { 
+    Gamepad::PURPLE,
+    Gamepad::CYAN,
+    Gamepad::RED,
+    Gamepad::GREEN,
+    Gamepad::BLUE,
+    Gamepad::YELLOW
+};
+
+
+
 void Gamepad::setAdapter(GamepadAdapter * adapter)
 {
     this->adapter = adapter;
@@ -19,7 +30,7 @@ void Gamepad::setAdapter(GamepadAdapter * adapter)
 
 bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
 {
-    if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize)!=0))
+    if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize <= 10 ? packetSize : 10)!=0))
     {
         if(adapter)
         {

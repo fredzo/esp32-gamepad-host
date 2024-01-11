@@ -40,7 +40,7 @@ void loop() {
                 printf("Before Rumble with state %d.\n",rumbleState);
                 uint8_t rumbleValue = rumbleState ? 0x7F : 0x00;
                 command->getGamepad()->setRumble(rumbleValue,rumbleValue);
-                command->getGamepad()->setLed(rumbleState ? Gamepad::PURPLE : Gamepad::BLUE);
+                command->getGamepad()->setPlayer(rumbleState ? 1 : 0);
                 printf("After Rumble !\n");
             }
          }

@@ -121,9 +121,9 @@ class DS4Adapter : public GamepadAdapter
         void connectionComplete(Gamepad* gamepad)
         {   // Request extended report (by sending a calibration feature report request)
             gamepad->sendReport(Gamepad::ReportType::R_CONTROL,FEATURE_REPORT_REQUEST_HEADER,DS4_FEATURE_REPORT_CALIBRATION);
-            // We need to delay sending of player led
-            gamepad->adapterState = SEND_PLAYER_LED;
-            //GamepadAdapter::connectionComplete(gamepad);
+            /*// We need to delay sending of player led
+            gamepad->adapterState = SEND_PLAYER_LED;*/
+            GamepadAdapter::connectionComplete(gamepad);
         }
 
         void parseButtons(GamepadCommand* command , PS4Buttons* buttons)
@@ -144,11 +144,11 @@ class DS4Adapter : public GamepadAdapter
 
         void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
-            if(gamepad->adapterState == SEND_PLAYER_LED)
+            /*if(gamepad->adapterState == SEND_PLAYER_LED)
             {   // First data packet => we can send player led
                 GamepadAdapter::connectionComplete(gamepad);
                 gamepad->adapterState = CONNECTED;
-            }
+            }*/
             if(packetSize >= 2)
             {
                 uint8_t reportId = packet[1];

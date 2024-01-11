@@ -17,6 +17,8 @@ class GamepadAdapter;
 // Report header for feature report request
 #define FEATURE_REPORT_REQUEST_HEADER   ((HID_MESSAGE_TYPE_GET_REPORT << 4) | HID_REPORT_TYPE_FEATURE)
 
+#define MAX_PLAYERS             6
+
 struct GamepadColor {
     uint8_t red;    
     uint8_t green;    
@@ -40,6 +42,7 @@ class Gamepad
         static const GamepadColor BLUE;
         static const GamepadColor YELLOW;
         static const GamepadColor WHITE;
+        static const GamepadColor PLAYER_COLORS[MAX_PLAYERS];
 
         GamepadCommand* getCommand();
         void setRumble(uint8_t left, uint8_t right);
