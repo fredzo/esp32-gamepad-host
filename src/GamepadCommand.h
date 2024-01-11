@@ -28,9 +28,12 @@ class GamepadCommand {
         uint16_t triggers[TRIGGERS_NUMBER];
         void hatToDpad(uint8_t hat);
         Gamepad* getGamepad();
+        bool hasChanged();
+        void setChanged() { changed = true; };
         String toString();
     private :
         Gamepad * gamepad;
+        bool changed = false;
    
 };
 #endif 

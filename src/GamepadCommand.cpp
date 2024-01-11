@@ -13,8 +13,15 @@ Gamepad* GamepadCommand::getGamepad()
     return gamepad;
 }
 
+bool GamepadCommand::hasChanged()
+{
+    bool result = changed;
+    changed = false;
+    return result;
+}
+
 bool GamepadCommand::hasCommand()
-{   // TODO fix this => with hasChanged
+{
     for(int i = 0 ; i < BUTTONS_NUMBER ; i++)
     {
         if(buttons[i]) return true;

@@ -87,6 +87,7 @@ class DS4Adapter : public GamepadAdapter
                     memcpy(&ds4Data, packet+2, 9);
                     GamepadCommand* command = gamepad->getCommand();
                     command->clearCommand();
+                    // TODO center axes values
                     command->axes[GamepadCommand::AxesLeft::L_HORIZONTAL]   = ds4Data.LeftX;
                     command->axes[GamepadCommand::AxesLeft::L_VERTICAL]     = ds4Data.LeftY;
                     command->axes[GamepadCommand::AxesRight::R_HORIZONTAL]  = ds4Data.RightX;
@@ -106,6 +107,7 @@ class DS4Adapter : public GamepadAdapter
                     command->triggers[GamepadCommand::Triggers::LEFT]   = ds4Data.LT;
                     command->triggers[GamepadCommand::Triggers::RIGHT]  = ds4Data.RT;
                     //LOG_INFO("Left / Right triggers : %u, %u\n",ds4Data.LT,ds4Data.RT);
+                    command->setChanged();
                 }
                 else
                 {   // TODO handle 0x11 reports

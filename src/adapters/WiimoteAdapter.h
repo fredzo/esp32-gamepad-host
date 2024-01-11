@@ -40,7 +40,7 @@ class WiimoteAdapter : public GamepadAdapter
         void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             if(packetSize >= 4)
-            {   // TODO handle extended reports (nunshuck)
+            {   // TODO handle extended reports (nunchuck)
                 ButtonState buttonState = (ButtonState)((packet[2] << 8) | packet[3]);
                 GamepadCommand* command = gamepad->getCommand();
                 command->clearCommand();
@@ -57,6 +57,7 @@ class WiimoteAdapter : public GamepadAdapter
                 command->buttons[GamepadCommand::WiiButtons::W_DPAD_RIGHT] = (buttonState & BUTTON_DOWN); // Wiimote horizontal
                 command->buttons[GamepadCommand::WiiButtons::W_DPAD_UP]    = (buttonState & BUTTON_RIGHT);// Wiimote horizontal
                 command->buttons[GamepadCommand::WiiButtons::W_DPAD_DOWN]  = (buttonState & BUTTON_LEFT); // Wiimote horizontal
+                command->setChanged();
             }
             else
             {
