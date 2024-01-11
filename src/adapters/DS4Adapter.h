@@ -53,15 +53,15 @@ typedef struct {
 typedef struct {
   uint8_t dummy0; // always 0xC0?
   uint8_t reportId; // Always 0x00
-  uint8_t leftX;
+  uint8_t leftX;            // 2 => cmp Start (6)
   uint8_t leftY;
   uint8_t rightX;
   uint8_t rightY;
-  PS4Buttons buttons;
-  uint8_t leftTrigger;
+  PS4Buttons buttons;       // 7 => Cmp end
+  uint8_t leftTrigger;      // 9 => Cmp start (2)
   uint8_t rightTrigger;
   uint16_t timestamp;
-  uint8_t battery;
+  uint8_t battery;          // 13 => Cmp start (1 no accell / 13 with accell)
   int16_t angularVelocityX;
   int16_t angularVelocityY;
   int16_t angularVelocityZ;
@@ -142,13 +142,14 @@ class DS4Adapter : public GamepadAdapter
             command->hatToDpad(buttons->dpad);
         }
 
-        void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
+        bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             /*if(gamepad->adapterState == SEND_PLAYER_LED)
             {   // First data packet => we can send player led
                 GamepadAdapter::connectionComplete(gamepad);
                 gamepad->adapterState = CONNECTED;
             }*/
+            bool changed = false;
             if(packetSize >= 2)
             {
                 uint8_t reportId = packet[1];
@@ -167,22 +168,27 @@ class DS4Adapter : public GamepadAdapter
                     command->triggers[GamepadCommand::Triggers::RIGHT]  = ds4Data.rightTrigger;
                     //LOG_INFO("Left / Right triggers : %u, %u\n",ds4Data.leftTrigger,ds4Data.rightTrigger);
                     command->setChanged();
+                    changed = true;
                 }
                 else if(reportId == 0x11)
-                {   // Extended report
-                    DS4DataExt ds4Data;
-                    memcpy(&ds4Data, packet+2, sizeof(DS4DataExt));
-                    GamepadCommand* command = gamepad->getCommand();
-                    command->clearCommand();
-                    command->axes[GamepadCommand::AxesLeft::L_HORIZONTAL]   = UINT8_TO_INT(ds4Data.leftX);
-                    command->axes[GamepadCommand::AxesLeft::L_VERTICAL]     = UINT8_TO_INT(ds4Data.leftY);
-                    command->axes[GamepadCommand::AxesRight::R_HORIZONTAL]  = UINT8_TO_INT(ds4Data.rightX);
-                    command->axes[GamepadCommand::AxesRight::R_VERTICAL]    = UINT8_TO_INT(ds4Data.rightY);
-                    parseButtons(command,&(ds4Data.buttons));
-                    command->triggers[GamepadCommand::Triggers::LEFT]   = ds4Data.leftTrigger;
-                    command->triggers[GamepadCommand::Triggers::RIGHT]  = ds4Data.rightTrigger;
-                    //LOG_INFO("Left / Right triggers : %u, %u\n",ds4Data.leftTrigger,ds4Data.rightTrigger);
-                    command->setChanged();
+                {   // Extended report => filter to ignore
+                    changed = (memcmp(gamepad->lastPacket+2,packet+2,6)!=0)/*||(memcmp(gamepad->lastPacket+9,packet+9,2)!=0)/*||(memcmp(gamepad->lastPacket+13,packet+13,1)!=0)*/;
+                    if(changed)
+                    {
+                        DS4DataExt ds4Data;
+                        memcpy(&ds4Data, packet+2, sizeof(DS4DataExt));
+                        GamepadCommand* command = gamepad->getCommand();
+                        command->clearCommand();
+                        command->axes[GamepadCommand::AxesLeft::L_HORIZONTAL]   = UINT8_TO_INT(ds4Data.leftX);
+                        command->axes[GamepadCommand::AxesLeft::L_VERTICAL]     = UINT8_TO_INT(ds4Data.leftY);
+                        command->axes[GamepadCommand::AxesRight::R_HORIZONTAL]  = UINT8_TO_INT(ds4Data.rightX);
+                        command->axes[GamepadCommand::AxesRight::R_VERTICAL]    = UINT8_TO_INT(ds4Data.rightY);
+                        parseButtons(command,&(ds4Data.buttons));
+                        command->triggers[GamepadCommand::Triggers::LEFT]   = ds4Data.leftTrigger;
+                        command->triggers[GamepadCommand::Triggers::RIGHT]  = ds4Data.rightTrigger;
+                        //LOG_INFO("Left / Right triggers : %u, %u\n",ds4Data.leftTrigger,ds4Data.rightTrigger);
+                        command->setChanged();
+                    }
                 }
                 else
                 {
@@ -190,6 +196,7 @@ class DS4Adapter : public GamepadAdapter
                     LOG_HEXDUMP(packet,packetSize);
                 }
             }
+            return changed;
         };
 
         void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)

@@ -30,12 +30,15 @@ void Gamepad::setAdapter(GamepadAdapter * adapter)
 
 bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
 {
-    if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize <= 10 ? packetSize : 10)!=0))
+    if(packetSize < MAX_BT_DATA_SIZE && (memcmp(lastPacket,packet,packetSize)!=0))
     {
         if(adapter)
         {
-            adapter->parseDataPacket(this,packet,packetSize);
-            LOG_INFO("%s\n",currentCommand->toString().c_str());
+            if(adapter->parseDataPacket(this,packet,packetSize))
+            {
+                LOG_INFO("%s\n",currentCommand->toString().c_str());
+                return true;
+            }
         }
         else
         {
@@ -44,12 +47,8 @@ bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
         }
         // Store packet content to last packet
         memcpy(lastPacket,packet,packetSize);
-        return true;
     }
-    else
-    {
-        return false;
-    }
+    return false;
 }
 
 // Called on connection complete

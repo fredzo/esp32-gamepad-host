@@ -37,7 +37,7 @@ class WiimoteAdapter : public GamepadAdapter
         };
 
 
-        void parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
+        bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             if(packetSize >= 4)
             {   // TODO handle extended reports (nunchuck)
@@ -58,12 +58,14 @@ class WiimoteAdapter : public GamepadAdapter
                 command->buttons[GamepadCommand::WiiButtons::W_DPAD_UP]    = (buttonState & BUTTON_RIGHT);// Wiimote horizontal
                 command->buttons[GamepadCommand::WiiButtons::W_DPAD_DOWN]  = (buttonState & BUTTON_LEFT); // Wiimote horizontal
                 command->setChanged();
+                return true;
             }
             else
             {
                 LOG_ERROR("Wrong packet size for Wiimote : %d\n",packetSize);
                 LOG_HEXDUMP(packet,packetSize);
             }
+            return false;
         }
 
         void setPlayer(Gamepad* gamepad, uint8_t playerNumber)
