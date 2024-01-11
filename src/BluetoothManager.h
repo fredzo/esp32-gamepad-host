@@ -7,6 +7,5 @@
 int bluetoothManagerInit(int maxConnections);
 void bluetoothManagerRun();
 void bluetoothManagerSendReport(Gamepad* gamepad);
-void maybeRumble();
 
 #endif

@@ -9,6 +9,9 @@
 #define AXES_NUMBER     4
 #define TRIGGERS_NUMBER 2
 
+// Forward declaration for gamepad to avoid circular dependency
+class Gamepad;
+
 class GamepadCommand {
     public :
         enum NintendoButtons { N_A = 0    , N_B     , N_X     , N_Y       , N_SHOULDER_LEFT, N_SHOULDER_RIGHT, N_TRIGGER_LEFT, N_TRIGGER_RIGHT, N_SELECT, N_START  , N_JOY_LEFT_CLICK, N_JOY_RIGHT_CLICK, N_DPAD_UP, N_DPAD_DOWN, N_DPAD_LEFT, N_DPAD_RIGHT, N_HOME };
@@ -17,13 +20,17 @@ class GamepadCommand {
         enum AxesLeft { L_HORIZONTAL = 0, L_VERTICAL = 1 };
         enum AxesRight { R_HORIZONTAL = 2, R_VERTICAL = 3 };
         enum Triggers { LEFT = 0, RIGHT = 1 };
-        GamepadCommand();
+        GamepadCommand(Gamepad * gamepad);
         bool hasCommand();
         void clearCommand();
         bool buttons[BUTTONS_NUMBER];
         int32_t axes[AXES_NUMBER];
         uint16_t triggers[TRIGGERS_NUMBER];
         void hatToDpad(uint8_t hat);
+        Gamepad* getGamepad();
         String toString();
+    private :
+        Gamepad * gamepad;
+   
 };
 #endif 

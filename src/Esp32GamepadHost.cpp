@@ -31,24 +31,45 @@ int Esp32GamepadHost::getGamepadCount()
 
 Gamepad* Esp32GamepadHost::getGamepad(int index)
 {
-    return NULL;
+    if(index >= 0 && index < gamepadCount)
+    {
+        return gamepads[index];
+    }
+    else
+    {
+        LOG_ERROR("Invalid gamepad index %d, gamepadCount = %d.\n",index,gamepadCount);
+        return NULL;
+    }
 }
 
-GamepadCommand* Esp32GamepadHost::getCommandForGamepad(int idndex)
+GamepadCommand* Esp32GamepadHost::getCommandForGamepad(int index)
 {
-    GamepadCommand* result = NULL;
-    return result;
+    if(index >= 0 && index < gamepadCount)
+    {
+        return gamepads[index]->getCommand();
+    }
+    else
+    {
+        LOG_ERROR("Invalid gamepad index %d, gamepadCount = %d.\n",index,gamepadCount);
+        return NULL;
+    }
 }
 
 GamepadCommand* Esp32GamepadHost::getCommand()
 {
-    GamepadCommand* result = NULL;
-    return result;
+    for(int i = 0 ; i < gamepadCount ; i++)
+    {
+        GamepadCommand* command = gamepads[i]->getCommand();
+        if(command->hasCommand())
+        {
+            return command;
+        }
+    }
+    return NULL;
 }
 
 void Esp32GamepadHost::processTasks()
-{
-    maybeRumble();
+{   // TODO : handle rumble timer
 }
 
 Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, uint32_t classOfDevice, uint16_t vendorId, uint16_t productId, uint8_t pageScanRepetitionMode, uint16_t clockOffset)

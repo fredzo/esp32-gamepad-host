@@ -87,7 +87,7 @@ class Gamepad
         uint8_t            rumbleRight = 0;
 
     private :
-        GamepadCommand*  currentCommand = new GamepadCommand();
+        GamepadCommand*  currentCommand = new GamepadCommand(this);
         GamepadAdapter*  adapter = NULL;
         String           name = UNDEFINED_ADAPTER_NAME;
         void updateName();

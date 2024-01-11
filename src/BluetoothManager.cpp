@@ -97,9 +97,6 @@ static void hid_host_setup(void)
 #endif
 }
 
-uint16_t rumbleBtChanel;
-bool shouldRumble = false;
-
 /* @section SDP parser callback 
  * 
  * @text The SDP parsers retrieves the BNEP PAN UUID as explained in  
@@ -538,12 +535,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     {
                         LOG_DEBUG("Gamepad DATA_PACKET ");
                         LOG_HEXDUMP(packet,size);
-                        if(packet[7]>=0x20)
-                        {
-                            printf("Will Rumble.\n");
-                            rumbleBtChanel = channel;
-                            shouldRumble = true;
-                        }
                     }
                 }
                 else
@@ -564,24 +555,6 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 void bluetoothManagerRun(void)
 {
     btstack_run_loop_execute();
-}
-
-
-bool rumbleState = false;
-void maybeRumble()
-{
-    if(shouldRumble)
-    {
-        shouldRumble = false;
-        rumbleState = !rumbleState;
-        printf("Before Rumble with state %d.\n",rumbleState);
-        Gamepad* gamepad = gamepadHost->getGamepadForChannel(rumbleBtChanel);
-        //gamepad->sendOutputReport(0x11,rumbleState ? rumble : rumbleOff,(sizeof(rumble)-1));
-        uint8_t rumbleValue = rumbleState ? 0xFF : 0x00;
-        gamepad->setRumble(rumbleValue,rumbleValue);
-        gamepad->setLed(rumbleState ? Gamepad::WHITE : Gamepad::YELLOW);
-        printf("After Rumble !\n");
-    }
 }
 
 int btStackMaxConnections;

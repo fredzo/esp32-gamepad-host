@@ -6,6 +6,9 @@
 
 #define CLASS_OF_DEVICE_WIIMOTE        0x002504
 
+#define WII_OUTPUT_REPORT_HEADER       0xA2
+#define WII_RUMBLE_REQUEST             0x10
+
 typedef enum {
     BUTTON_Z          = 0x00020000, // nunchuk
     BUTTON_C          = 0x00010000, // nunchuk
@@ -69,6 +72,14 @@ class WiimoteAdapter : public GamepadAdapter
             uint8_t payload[1];
             payload[0] = (uint8_t)(leds << 4);
             gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,0x11,payload,1);
+        }
+
+        void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)
+        {
+            bool rumble = ((left > 0) || (right > 0));
+            uint8_t payload[1];
+            payload[0] = rumble ? 0x01 : 0x00;
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,WII_OUTPUT_REPORT_HEADER,WII_RUMBLE_REQUEST,payload,1);
         }
 };
 

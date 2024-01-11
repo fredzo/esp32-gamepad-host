@@ -1,9 +1,16 @@
 #include <GamepadCommand.h>
 #include <Esp32GamepadHostConfig.h>
+#include <Gamepad.h>
 
-GamepadCommand::GamepadCommand()
+GamepadCommand::GamepadCommand(Gamepad * gamepad)
 {
+    this->gamepad = gamepad;
     clearCommand();
+}
+
+Gamepad* GamepadCommand::getGamepad()
+{
+    return gamepad;
 }
 
 bool GamepadCommand::hasCommand()
