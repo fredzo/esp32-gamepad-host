@@ -172,7 +172,7 @@ class DS4Adapter : public GamepadAdapter
                 }
                 else if(reportId == 0x11)
                 {   // Extended report => filter to ignore
-                    changed = (memcmp(gamepad->lastPacket+2,packet+2,6)!=0)/*||(memcmp(gamepad->lastPacket+9,packet+9,2)!=0)/*||(memcmp(gamepad->lastPacket+13,packet+13,1)!=0)*/;
+                    changed = (memcmp(gamepad->lastPacket,packet,8)!=0)/*||(memcmp(gamepad->lastPacket+9,packet+9,2)!=0)/*||(memcmp(gamepad->lastPacket+13,packet+13,1)!=0)*/;
                     if(changed)
                     {
                         DS4DataExt ds4Data;
