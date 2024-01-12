@@ -19,6 +19,8 @@ class GamepadAdapter
         virtual void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right) {};
         virtual void setLed(Gamepad* gamepad, GamepadColor color) {};
         virtual void setPlayer(Gamepad* gamepad, uint8_t playerNumber);
+    protected :
+        bool packetChanged(uint8_t * oldPacket, uint8_t * packet, uint8_t * mask, uint16_t packetSize);
 };
 
 #endif 

@@ -110,9 +110,40 @@ enum DS4AdapterState {
 
 class DS4Adapter : public GamepadAdapter
 {
-    public :
-        const char* getName() { return "Dualshock 4"; };
+    private :
+        DS4DataExt mask;
 
+    public :
+        DS4Adapter() {
+            mask.dummy0 = 0x00;
+            mask.reportId = 0x00;
+            mask.leftX = 0xFF;
+            mask.leftY = 0xFF;
+            mask.rightX = 0xFF;
+            mask.rightY = 0xFF;
+            mask.buttons.val = 0xFFFFC0;
+            mask.leftTrigger = 0xFF;
+            mask.rightTrigger =0xFF;
+            mask.timestamp = 0x0000;
+            mask.battery = 0xFF;
+            mask.angularVelocityX = 0xFFFF;
+            mask.angularVelocityY = 0xFFFF;
+            mask.angularVelocityZ = 0xFFFF;
+            mask.accelerationX = 0xFFFF;
+            mask.accelerationY = 0xFFFF;
+            mask.accelerationZ = 0xFFFF;
+            mask.dummy1 = 0x00000000;
+            mask.dummy2 = 0x00000000;
+            mask.peripheral = 0x00;
+            mask.dummy3 = 0x00;
+            mask.trackpadPacketCount = 0x00;
+            PS4TrackpadData trackpadData[4] = {0,0,0,0};
+            mask.dummy4 = 0x00;
+            mask.crc32 = 0x00;        
+        }
+
+        const char* getName() { return "Dualshock 4"; };
+        
         bool match(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice)
         {
             return classOfDevice == CLASS_OF_DEVICE_DS4;
@@ -124,7 +155,7 @@ class DS4Adapter : public GamepadAdapter
             /*// We need to delay sending of player led
             gamepad->adapterState = SEND_PLAYER_LED;*/
             GamepadAdapter::connectionComplete(gamepad);
-        }
+        };
 
         void parseButtons(GamepadCommand* command , PS4Buttons* buttons)
         {
@@ -140,7 +171,7 @@ class DS4Adapter : public GamepadAdapter
             command->buttons[GamepadCommand::SonyButtons::S_TRIGGER_LEFT]   = buttons->l2;
             command->buttons[GamepadCommand::SonyButtons::S_TRIGGER_RIGHT]  = buttons->r2;
             command->hatToDpad(buttons->dpad);
-        }
+        };
 
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
@@ -172,7 +203,8 @@ class DS4Adapter : public GamepadAdapter
                 }
                 else if(reportId == 0x11)
                 {   // Extended report => filter to ignore
-                    changed = (memcmp(gamepad->lastPacket,packet,8)!=0)/*||(memcmp(gamepad->lastPacket+9,packet+9,2)!=0)/*||(memcmp(gamepad->lastPacket+13,packet+13,1)!=0)*/;
+                    changed = false;//(memcmp(gamepad->lastPacket,packet,8)!=0)/*||(memcmp(gamepad->lastPacket+9,packet+9,2)!=0)/*||(memcmp(gamepad->lastPacket+13,packet+13,1)!=0)*/;
+                    //changed = packetChanged(gamepad->lastPacket+2,packet+2,(uint8_t*)(&mask),sizeof(DS4DataExt));
                     if(changed)
                     {
                         DS4DataExt ds4Data;
