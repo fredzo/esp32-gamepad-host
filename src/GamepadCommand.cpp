@@ -98,9 +98,9 @@ void GamepadCommand::hatToDpad(uint8_t hat)
 String GamepadCommand::toString()
 {
     char buffer[128];
-    //              Command[ ^ v < > A B X Y l r L R s S H][rr,ll](xx,yy)(xx,yy)
-    sprintf(buffer,"Command[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)"
-    //              Command[ ^ v < > A B X Y l r L R s S H][rr,ll](xx,yy)(xx,yy)
+    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|(xx,yy,zz)(xx,yy,zz)
+    sprintf(buffer,"Command[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|(%d,%d,%d)(%d,%d,%d)"
+    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|(xx,yy,zz)(xx,yy,zz)
                           ,buttons[N_DPAD_UP]?   '^' : ' '
                           ,buttons[N_DPAD_DOWN]? 'v' : ' '
                           ,buttons[N_DPAD_LEFT]? '<': ' '
@@ -116,11 +116,20 @@ String GamepadCommand::toString()
                           ,buttons[N_START]?    's' : ' '
                           ,buttons[N_SELECT]?   'S' : ' '
                           ,buttons[N_HOME]?     'H' : ' '
+                          ,buttons[N_TOUCH]?    'T' : ' '
                           ,triggers[LEFT]
                           ,triggers[RIGHT]
                           ,axes[L_HORIZONTAL]
                           ,axes[L_VERTICAL]
                           ,axes[R_HORIZONTAL]
-                          ,axes[R_VERTICAL]);
+                          ,axes[R_VERTICAL]
+                          ,battery
+                          ,gyro[X]
+                          ,gyro[Y]
+                          ,gyro[Z]
+                          ,accel[X]
+                          ,accel[Y]
+                          ,accel[Z]
+                          );
     return String(buffer);
 }

@@ -61,7 +61,7 @@ typedef struct {
   uint8_t leftTrigger;      // 9 => Cmp start (2)
   uint8_t rightTrigger;
   uint16_t timestamp;
-  uint8_t battery;          // 13 => Cmp start (1 no accell / 13 with accell)
+  uint8_t temperature;          // 13 => Cmp start (1 no accell / 13 with accell)
   int16_t angularVelocityX;
   int16_t angularVelocityY;
   int16_t angularVelocityZ;
@@ -70,7 +70,7 @@ typedef struct {
   int16_t accelerationZ;
   uint32_t dummy1; // Always 0x00;
   uint8_t dummy2; // Always 0x00;
-  uint8_t peripheral;
+  uint8_t status;
   uint16_t dummy3; // Always 0x00
   uint8_t trackpadPacketCount;
   PS4TrackpadData trackpadData[4];
@@ -121,21 +121,21 @@ class DS4Adapter : public GamepadAdapter
             mask.leftY = 0xFF;
             mask.rightX = 0xFF;
             mask.rightY = 0xFF;
-            mask.buttons.val = 0xFFFFC0;
+            mask.buttons.val = 0x03FFFF;
             mask.leftTrigger = 0xFF;
             mask.rightTrigger =0xFF;
             mask.timestamp = 0x0000;
-            mask.battery = 0xFF;
-            mask.angularVelocityX = 0xFFFF;
-            mask.angularVelocityY = 0xFFFF;
-            mask.angularVelocityZ = 0xFFFF;
-            mask.accelerationX = 0xFFFF;
-            mask.accelerationY = 0xFFFF;
-            mask.accelerationZ = 0xFFFF;
+            mask.temperature = 0x00;
+            mask.angularVelocityX = 0;//0xFFFF;
+            mask.angularVelocityY = 0;//0xFFFF;
+            mask.angularVelocityZ = 0;//0xFFFF;
+            mask.accelerationX = 0;//0xFFFF;
+            mask.accelerationY = 0;//0xFFFF;
+            mask.accelerationZ = 0;//0xFFFF;
             mask.dummy1 = 0x00000000;
             mask.dummy2 = 0x00000000;
-            mask.peripheral = 0x00;
-            mask.dummy3 = 0x00;
+            mask.status = 0xFF;
+            mask.dummy3 = 0x0000;
             mask.trackpadPacketCount = 0x00;
             PS4TrackpadData trackpadData[4] = {0,0,0,0};
             mask.dummy4 = 0x00;
@@ -170,6 +170,7 @@ class DS4Adapter : public GamepadAdapter
             command->buttons[GamepadCommand::SonyButtons::S_SHOULDER_RIGHT] = buttons->r1;
             command->buttons[GamepadCommand::SonyButtons::S_TRIGGER_LEFT]   = buttons->l2;
             command->buttons[GamepadCommand::SonyButtons::S_TRIGGER_RIGHT]  = buttons->r2;
+            command->buttons[GamepadCommand::SonyButtons::S_TOUCH]          = buttons->touchpad;
             command->hatToDpad(buttons->dpad);
         };
 
@@ -202,9 +203,8 @@ class DS4Adapter : public GamepadAdapter
                     changed = true;
                 }
                 else if(reportId == 0x11)
-                {   // Extended report => filter to ignore
-                    changed = false;//(memcmp(gamepad->lastPacket,packet,8)!=0)/*||(memcmp(gamepad->lastPacket+9,packet+9,2)!=0)/*||(memcmp(gamepad->lastPacket+13,packet+13,1)!=0)*/;
-                    //changed = packetChanged(gamepad->lastPacket+2,packet+2,(uint8_t*)(&mask),sizeof(DS4DataExt));
+                {   // Extended report => filter to ignore non relevant data
+                    changed = packetChanged((gamepad->lastPacket)+2,packet+2,(uint8_t*)(&mask),25);
                     if(changed)
                     {
                         DS4DataExt ds4Data;
@@ -218,6 +218,13 @@ class DS4Adapter : public GamepadAdapter
                         parseButtons(command,&(ds4Data.buttons));
                         command->triggers[GamepadCommand::Triggers::LEFT]   = ds4Data.leftTrigger;
                         command->triggers[GamepadCommand::Triggers::RIGHT]  = ds4Data.rightTrigger;
+                        command->battery = ds4Data.status & 0x0F;
+                        command->gyro[GamepadCommand::AXES::X] = ds4Data.angularVelocityX;
+                        command->gyro[GamepadCommand::AXES::Y] = ds4Data.angularVelocityY;
+                        command->gyro[GamepadCommand::AXES::Z] = ds4Data.angularVelocityZ;
+                        command->accel[GamepadCommand::AXES::X] = ds4Data.accelerationX;
+                        command->accel[GamepadCommand::AXES::Y] = ds4Data.accelerationY;
+                        command->accel[GamepadCommand::AXES::Z] = ds4Data.accelerationZ;
                         //LOG_INFO("Left / Right triggers : %u, %u\n",ds4Data.leftTrigger,ds4Data.rightTrigger);
                         command->setChanged();
                     }
