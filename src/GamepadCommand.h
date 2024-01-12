@@ -27,8 +27,9 @@ class GamepadCommand {
         bool buttons[BUTTONS_NUMBER];
         int16_t axes[AXES_NUMBER];
         uint16_t triggers[TRIGGERS_NUMBER];
-        uint16_t gyro[3];
-        uint16_t accel[3];
+        uint16_t gyro[3]; // x y z
+        uint16_t accel[3];// x y z
+        uint16_t touch[2];// x y
         uint16_t battery;
         void hatToDpad(uint8_t hat);
         Gamepad* getGamepad();

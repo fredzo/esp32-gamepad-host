@@ -97,10 +97,10 @@ void GamepadCommand::hatToDpad(uint8_t hat)
 
 String GamepadCommand::toString()
 {
-    char buffer[128];
-    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|(xx,yy,zz)(xx,yy,zz)
-    sprintf(buffer,"Command[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|(%d,%d,%d)(%d,%d,%d)"
-    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|(xx,yy,zz)(xx,yy,zz)
+    char buffer[128]; //                                    triggers joy L  joy R       touch    gyro     accel
+    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
+    sprintf(buffer,"Command[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|[%d,%d](%d,%d,%d)(%d,%d,%d)"
+    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
                           ,buttons[N_DPAD_UP]?   '^' : ' '
                           ,buttons[N_DPAD_DOWN]? 'v' : ' '
                           ,buttons[N_DPAD_LEFT]? '<': ' '
@@ -124,6 +124,8 @@ String GamepadCommand::toString()
                           ,axes[R_HORIZONTAL]
                           ,axes[R_VERTICAL]
                           ,battery
+                          ,touch[X]
+                          ,touch[Y]
                           ,gyro[X]
                           ,gyro[Y]
                           ,gyro[Z]

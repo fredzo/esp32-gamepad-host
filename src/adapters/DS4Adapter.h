@@ -44,34 +44,41 @@ typedef struct {
 } __attribute__((packed)) DS4Data;
 
 typedef struct {
+    uint8_t contact;
+    uint8_t x_lo;
+    uint8_t x_hi : 4, y_lo : 4;
+    uint8_t y_hi;
+} __attribute((packed)) PS4TouchPoint;
+
+typedef struct {
   uint8_t packetCounter;
-  uint32_t finger1Data;
-  uint32_t finger2Data;
+  PS4TouchPoint finger1Data;
+  PS4TouchPoint finger2Data;
 } __attribute__((packed)) PS4TrackpadData;
 
 
 typedef struct {
-  uint8_t dummy0; // always 0xC0?
+  uint8_t dummy0;   // always 0xC0?
   uint8_t reportId; // Always 0x00
-  uint8_t leftX;            // 2 => cmp Start (6)
+  uint8_t leftX;
   uint8_t leftY;
   uint8_t rightX;
   uint8_t rightY;
-  PS4Buttons buttons;       // 7 => Cmp end
-  uint8_t leftTrigger;      // 9 => Cmp start (2)
+  PS4Buttons buttons;
+  uint8_t leftTrigger;
   uint8_t rightTrigger;
   uint16_t timestamp;
-  uint8_t temperature;          // 13 => Cmp start (1 no accell / 13 with accell)
+  uint8_t temperature;
   int16_t angularVelocityX;
   int16_t angularVelocityY;
   int16_t angularVelocityZ;
   int16_t accelerationX;
   int16_t accelerationY;
   int16_t accelerationZ;
-  uint32_t dummy1; // Always 0x00;
-  uint8_t dummy2; // Always 0x00;
+  uint32_t dummy1;
+  uint8_t dummy2;
   uint8_t status;
-  uint16_t dummy3; // Always 0x00
+  uint16_t dummy3;
   uint8_t trackpadPacketCount;
   PS4TrackpadData trackpadData[4];
   uint16_t dummy4;
@@ -139,7 +146,12 @@ class DS4Adapter : public GamepadAdapter
             mask.trackpadPacketCount = 0x00;
             PS4TrackpadData trackpadData[4] = {0,0,0,0};
             mask.dummy4 = 0x00;
-            mask.crc32 = 0x00;        
+            mask.crc32 = 0x00;
+            mask.trackpadData[0].finger1Data.contact = 0xFF;
+            mask.trackpadData[0].finger1Data.x_lo = 0xFF;
+            mask.trackpadData[0].finger1Data.x_hi = 0xF;
+            mask.trackpadData[0].finger1Data.y_lo = 0xF;
+            mask.trackpadData[0].finger1Data.y_hi = 0xFF;
         }
 
         const char* getName() { return "Dualshock 4"; };
@@ -204,7 +216,7 @@ class DS4Adapter : public GamepadAdapter
                 }
                 else if(reportId == 0x11)
                 {   // Extended report => filter to ignore non relevant data
-                    changed = packetChanged((gamepad->lastPacket)+2,packet+2,(uint8_t*)(&mask),25);
+                    changed = packetChanged((gamepad->lastPacket)+2,packet+2,(uint8_t*)(&mask),44 /*sizeof(DS4DataExt)*/);
                     if(changed)
                     {
                         DS4DataExt ds4Data;
@@ -225,6 +237,9 @@ class DS4Adapter : public GamepadAdapter
                         command->accel[GamepadCommand::AXES::X] = ds4Data.accelerationX;
                         command->accel[GamepadCommand::AXES::Y] = ds4Data.accelerationY;
                         command->accel[GamepadCommand::AXES::Z] = ds4Data.accelerationZ;
+                        // Read touchpad
+                        command->touch[GamepadCommand::AXES::X] = (ds4Data.trackpadData[0].finger1Data.x_hi << 8) + ds4Data.trackpadData[0].finger1Data.x_lo;
+                        command->touch[GamepadCommand::AXES::Y] = (ds4Data.trackpadData[0].finger1Data.y_hi << 4) + ds4Data.trackpadData[0].finger1Data.y_lo;
                         //LOG_INFO("Left / Right triggers : %u, %u\n",ds4Data.leftTrigger,ds4Data.rightTrigger);
                         command->setChanged();
                     }
