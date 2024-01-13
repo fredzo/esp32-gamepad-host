@@ -134,19 +134,9 @@ static void do_connection_requests(void){
     if(gamepadToConnect != NULL)
     {   // Connect to gamepad
         LOG_DEBUG("Connect to device for index %d.\n",gamepadToConnect->index);
-        // TODO : move this to wimote sepcific code
-        if(gamepadToConnect->classOfDevice == CLASS_OF_DEVICE_WIIMOTE)
-        {   // For wiimote
-            LOG_DEBUG("Setting security level to 0 for wiimote.\n");
-            gap_set_security_level(LEVEL_0);  
-        }
-        else
-        {   // Default level is 2
-            gap_set_security_level(LEVEL_2);  
-        }
-
-        LOG_DEBUG("Start SDP HID query for remote HID Device with address=%s.\n",
-        bd_addr_to_str(gamepadToConnect->address));
+        // Set security level according to gamepad
+        gap_set_security_level(gamepadToConnect->isLowLevelSecurity() ? LEVEL_0 : LEVEL_2);  
+        LOG_DEBUG("Start SDP HID query for remote HID Device with address=%s with %s security level.\n", bd_addr_to_str(gamepadToConnect->address), gamepadToConnect->isLowLevelSecurity() ? "LOW" : "HIGH");
         uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, gamepadToConnect->address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
         if (status == ERROR_CODE_SUCCESS) {
             bluetoothState = CONNECTING;

@@ -1,5 +1,10 @@
 #include <GamepadAdapter.h>
 
+bool GamepadAdapter::isLowLevelSecurity(Gamepad * gamepad)
+{   // Default to high level security
+    return false;
+}
+
 void GamepadAdapter::setPlayer(Gamepad* gamepad, uint8_t playerNumber)
 {
     gamepad->setLed(Gamepad::PLAYER_COLORS[playerNumber]);

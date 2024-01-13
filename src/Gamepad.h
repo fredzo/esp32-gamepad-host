@@ -75,6 +75,8 @@ class Gamepad
         // State for gamepad adapter state macine
         uint8_t            adapterState = 0;
 
+        bool isLowLevelSecurity();
+
         bool parseDataPacket(uint8_t * packet, uint16_t packetSize);
 
         void setAdapter(GamepadAdapter* adapter);

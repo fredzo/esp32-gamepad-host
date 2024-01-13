@@ -36,6 +36,11 @@ class WiimoteAdapter : public GamepadAdapter
             return classOfDevice == CLASS_OF_DEVICE_WIIMOTE;
         };
 
+        bool isLowLevelSecurity(Gamepad * gamepad)
+        {   // Wiimote needs low level security
+            return true;
+        }
+
 
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {

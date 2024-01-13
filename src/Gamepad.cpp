@@ -28,6 +28,15 @@ void Gamepad::setAdapter(GamepadAdapter * adapter)
     updateName();
 }
 
+bool Gamepad::isLowLevelSecurity()
+{
+    if(adapter)
+    {
+        return adapter->isLowLevelSecurity(this);
+    }
+    return false;
+}
+
 bool Gamepad::parseDataPacket(uint8_t * packet, uint16_t packetSize)
 {
     bool parsed = false;
