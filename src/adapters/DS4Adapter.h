@@ -182,6 +182,8 @@ class DS4Adapter : public GamepadAdapter
             command->buttons[GamepadCommand::SonyButtons::S_SHOULDER_RIGHT] = buttons->r1;
             command->buttons[GamepadCommand::SonyButtons::S_TRIGGER_LEFT]   = buttons->l2;
             command->buttons[GamepadCommand::SonyButtons::S_TRIGGER_RIGHT]  = buttons->r2;
+            command->buttons[GamepadCommand::SonyButtons::S_JOY_LEFT_CLICK] = buttons->l3;
+            command->buttons[GamepadCommand::SonyButtons::S_JOY_RIGHT_CLICK]= buttons->r3;
             command->buttons[GamepadCommand::SonyButtons::S_TOUCH]          = buttons->touchpad;
             command->hatToDpad(buttons->dpad);
         };

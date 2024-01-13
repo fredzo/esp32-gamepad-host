@@ -51,6 +51,18 @@ void GamepadCommand::clearCommand()
     {
         triggers[i] = 0;
     }
+    for(int i = 0 ; i < GYRO_NUMBER ; i++)
+    {
+        gyro[i] = 0;
+    }
+    for(int i = 0 ; i < ACCEL_NUMBER ; i++)
+    {
+        accel[i] = 0;
+    }
+    for(int i = 0 ; i < TOUCH_NUMBER ; i++)
+    {
+        touch[i] = 0;
+    }
 }
 
 void GamepadCommand::hatToDpad(uint8_t hat)
@@ -98,9 +110,11 @@ void GamepadCommand::hatToDpad(uint8_t hat)
 String GamepadCommand::toString()
 {
     char buffer[128]; //                                    triggers joy L  joy R       touch    gyro     accel
-    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
-    sprintf(buffer,"Command[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|[%d,%d](%d,%d,%d)(%d,%d,%d)"
-    //              Command[ ^ v < > A B X Y l r L R s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
+    //             gamepad[ ^ v < > A B X Y l r L R G D s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
+    sprintf(buffer,"#%d-%s[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|[%d,%d](%d,%d,%d)(%d,%d,%d)"
+    //             gamepad[ ^ v < > A B X Y l r L R G D s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
+                          ,gamepad->index
+                          ,gamepad->getName().c_str()
                           ,buttons[N_DPAD_UP]?   '^' : ' '
                           ,buttons[N_DPAD_DOWN]? 'v' : ' '
                           ,buttons[N_DPAD_LEFT]? '<': ' '
@@ -113,6 +127,8 @@ String GamepadCommand::toString()
                           ,buttons[N_SHOULDER_RIGHT]?   'r' : ' '
                           ,buttons[N_TRIGGER_LEFT]?     'L' : ' '
                           ,buttons[N_TRIGGER_RIGHT]?    'R' : ' '
+                          ,buttons[N_JOY_LEFT_CLICK]?   'G' : ' '
+                          ,buttons[N_JOY_RIGHT_CLICK]?  'D' : ' '
                           ,buttons[N_START]?    's' : ' '
                           ,buttons[N_SELECT]?   'S' : ' '
                           ,buttons[N_HOME]?     'H' : ' '

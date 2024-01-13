@@ -40,7 +40,7 @@ class WiimoteAdapter : public GamepadAdapter
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             if(packetSize >= 4)
-            {   // TODO handle extended reports (nunchuck)
+            {   // TODO handle extended reports (nunchuck/accel)
                 ButtonState buttonState = (ButtonState)((packet[2] << 8) | packet[3]);
                 GamepadCommand* command = gamepad->getCommand();
                 command->clearCommand();

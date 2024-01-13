@@ -39,8 +39,8 @@ void loop() {
                 rumbleState = !rumbleState;
                 printf("Before Rumble with state %d.\n",rumbleState);
                 uint8_t rumbleValue = rumbleState ? 0x7F : 0x00;
-                command->getGamepad()->setRumble(rumbleValue,rumbleValue);
                 command->getGamepad()->setPlayer(rumbleState ? 1 : 0);
+                command->getGamepad()->setRumble(rumbleValue,rumbleValue);
                 printf("After Rumble !\n");
             }
          }

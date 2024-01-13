@@ -8,6 +8,9 @@
 #define BUTTONS_NUMBER  18
 #define AXES_NUMBER     4
 #define TRIGGERS_NUMBER 2
+#define GYRO_NUMBER     3
+#define ACCEL_NUMBER    3
+#define TOUCH_NUMBER    2
 
 // Forward declaration for gamepad to avoid circular dependency
 class Gamepad;
@@ -27,10 +30,10 @@ class GamepadCommand {
         bool buttons[BUTTONS_NUMBER];
         int16_t axes[AXES_NUMBER];
         uint16_t triggers[TRIGGERS_NUMBER];
-        uint16_t gyro[3]; // x y z
-        uint16_t accel[3];// x y z
-        uint16_t touch[2];// x y
-        uint16_t battery;
+        uint16_t gyro[GYRO_NUMBER]; // x y z
+        uint16_t accel[ACCEL_NUMBER];// x y z
+        uint16_t touch[TOUCH_NUMBER];// x y
+        uint16_t battery = 0;
         void hatToDpad(uint8_t hat);
         Gamepad* getGamepad();
         bool hasChanged();
