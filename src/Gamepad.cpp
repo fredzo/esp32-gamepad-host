@@ -20,6 +20,125 @@ const GamepadColor Gamepad::PLAYER_COLORS[] = {
     Gamepad::YELLOW
 };
 
+hsv gamepadColor2hsv(GamepadColor in)
+{
+    rgb rgbIn;
+    rgbIn.r = ((double)in.red)/0xFF;
+    rgbIn.g = ((double)in.green)/0xFF;
+    rgbIn.b = ((double)in.blue)/0xFF;
+    return rgb2hsv(rgbIn);
+}
+
+GamepadColor hsv2GamepadColor(hsv in)
+{
+    rgb rgbResult = hsv2rgb(in);
+    GamepadColor result(rgbResult.r * 0xFF, rgbResult.g * 0xFF, rgbResult.b * 0xFF);
+    return result;
+}
+
+// For color fading : HSV -> RGB and RGB -> HSV conversion (from https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both)
+hsv rgb2hsv(rgb in)
+{
+    hsv         out;
+    double      min, max, delta;
+
+    min = in.r < in.g ? in.r : in.g;
+    min = min  < in.b ? min  : in.b;
+
+    max = in.r > in.g ? in.r : in.g;
+    max = max  > in.b ? max  : in.b;
+
+    out.v = max;                                // v
+    delta = max - min;
+    if (delta < 0.00001)
+    {
+        out.s = 0;
+        out.h = 0; // undefined, maybe nan?
+        return out;
+    }
+    if( max > 0.0 ) { // NOTE: if Max is == 0, this divide would cause a crash
+        out.s = (delta / max);                  // s
+    } else {
+        // if max is 0, then r = g = b = 0              
+        // s = 0, h is undefined
+        out.s = 0.0;
+        out.h = NAN;                            // its now undefined
+        return out;
+    }
+    if( in.r >= max )                           // > is bogus, just keeps compilor happy
+        out.h = ( in.g - in.b ) / delta;        // between yellow & magenta
+    else
+    if( in.g >= max )
+        out.h = 2.0 + ( in.b - in.r ) / delta;  // between cyan & yellow
+    else
+        out.h = 4.0 + ( in.r - in.g ) / delta;  // between magenta & cyan
+
+    out.h *= 60.0;                              // degrees
+
+    if( out.h < 0.0 )
+        out.h += 360.0;
+
+    return out;
+}
+
+rgb hsv2rgb(hsv in)
+{
+    double      hh, p, q, t, ff;
+    long        i;
+    rgb         out;
+
+    if(in.s <= 0.0) {       // < is bogus, just shuts up warnings
+        out.r = in.v;
+        out.g = in.v;
+        out.b = in.v;
+        return out;
+    }
+    hh = in.h;
+    if(hh >= 360.0) hh = 0.0;
+    hh /= 60.0;
+    i = (long)hh;
+    ff = hh - i;
+    p = in.v * (1.0 - in.s);
+    q = in.v * (1.0 - (in.s * ff));
+    t = in.v * (1.0 - (in.s * (1.0 - ff)));
+
+    switch(i) {
+    case 0:
+        out.r = in.v;
+        out.g = t;
+        out.b = p;
+        break;
+    case 1:
+        out.r = q;
+        out.g = in.v;
+        out.b = p;
+        break;
+    case 2:
+        out.r = p;
+        out.g = in.v;
+        out.b = t;
+        break;
+
+    case 3:
+        out.r = p;
+        out.g = q;
+        out.b = in.v;
+        break;
+    case 4:
+        out.r = t;
+        out.g = p;
+        out.b = in.v;
+        break;
+    case 5:
+    default:
+        out.r = in.v;
+        out.g = p;
+        out.b = q;
+        break;
+    }
+    return out;     
+}
+
 void Gamepad::setAdapter(GamepadAdapter * adapter)
 {
     this->adapter = adapter;
@@ -91,11 +210,27 @@ void Gamepad::setRumble(uint8_t left, uint8_t right, uint16_t duration)
 
 void Gamepad::setLed(GamepadColor color, uint16_t fadeTime)
 {
-    this->color = color;
-    LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%02X) for gamepad for gamepad %s.\n",this->color.red,this->color.green,this->color.blue,toString().c_str());
+    LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%02X) with fade time %dms for gamepad for gamepad %s.\n",color.red,color.green,color.blue,fadeTime,toString().c_str());
     if(adapter)
     {
-        adapter->setLed(this,color);
+        if(this->color != color)
+        {
+            if(fadeTime > 0)
+            {
+                fadingTimer = true;
+                fadeStartTime = millis();
+                fadingStepDuration = fadeTime / FADE_STEPS;
+                fromColor = gamepadColor2hsv(this->color);
+                toColor = gamepadColor2hsv(color);
+                toColorRgb = color;
+                fadeNextStepTime = fadeStartTime + fadingStepDuration;
+            }
+            else
+            {
+                adapter->setLed(this,color);
+                this->color = color;
+            }
+        }
     }
     else
     {
@@ -112,6 +247,29 @@ void Gamepad::processTasks()
         {   // Stop rumble
             rumbleTimer = false;
             if(adapter) adapter->setRumble(this,0,0);
+        }
+    }
+    if(fadingTimer)
+    {
+        unsigned long now = millis();
+        if(now >= fadeNextStepTime)
+        {
+            fadeNextStepTime = now + fadingStepDuration;
+            hsv currentColor;
+            int currentStep = (now - fadeStartTime)/fadingStepDuration;
+            if(currentStep>=FADE_STEPS)
+            {
+                fadingTimer = false;
+                this->color = toColorRgb;
+            }
+            else
+            {
+                currentColor.h = fromColor.h < toColor.h ? fromColor.h+((toColor.h-fromColor.h)/FADE_STEPS)*currentStep : fromColor.h - ((fromColor.h-toColor.h)/FADE_STEPS)*currentStep;
+                currentColor.s = fromColor.s < toColor.s ? fromColor.s+((toColor.s-fromColor.s)/FADE_STEPS)*currentStep : fromColor.s - ((fromColor.s-toColor.s)/FADE_STEPS)*currentStep;
+                currentColor.v = fromColor.v < toColor.v ? fromColor.v+((toColor.v-fromColor.v)/FADE_STEPS)*currentStep : fromColor.v - ((fromColor.v-toColor.v)/FADE_STEPS)*currentStep;
+                this->color = hsv2GamepadColor(currentColor);
+            }
+            if(adapter) adapter->setLed(this,this->color);
         }
     }
 }
@@ -141,11 +299,14 @@ void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, cons
         LOG_ERROR("ERROR : Invalid report length %d, max length is %d for gamepad %s.\n", reportLength, MAX_BT_DATA_SIZE, toString().c_str());
         return;
     }
+    // Prevent concurrent access to report information
+    xSemaphoreTake( reportAccessMutex, portMAX_DELAY );
     this->reportType = type;
     this->reportHeader = header;
     this->reportId = reportId;
     if(report && (reportLength > 0)) memcpy(this->report, report, reportLength);
     this->reportLength = reportLength;
+    xSemaphoreGive(reportAccessMutex);
     bluetoothManagerSendReport(this);
 }
 

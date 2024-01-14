@@ -19,6 +19,8 @@ class GamepadAdapter;
 
 #define MAX_PLAYERS             6
 
+#define FADE_STEPS              0xFF
+
 struct GamepadColor {
     uint8_t red;    
     uint8_t green;    
@@ -29,6 +31,37 @@ struct GamepadColor {
     /// Allow assignment from one RGB struct to another
     inline GamepadColor& operator= (const GamepadColor& rhs) __attribute__((always_inline)) = default;
 };
+
+/// Check if two GamepadColor objects have the same color data
+inline __attribute__((always_inline)) bool operator== (const GamepadColor& lhs, const GamepadColor& rhs)
+{
+    return (lhs.red == rhs.red) && (lhs.green == rhs.green) && (lhs.blue == rhs.blue);
+};
+
+/// Check if two GamepadColor objects do *not* have the same color data
+inline __attribute__((always_inline)) bool operator!= (const GamepadColor& lhs, const GamepadColor& rhs)
+{
+    return !(lhs == rhs);
+};
+
+// For color fading : HSV -> RGB and RGB -> HSV conversion (from https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both)
+typedef struct {
+    double r;       // a fraction between 0 and 1
+    double g;       // a fraction between 0 and 1
+    double b;       // a fraction between 0 and 1
+} rgb;
+
+typedef struct {
+    double h;       // angle in degrees
+    double s;       // a fraction between 0 and 1
+    double v;       // a fraction between 0 and 1
+} hsv;
+
+static hsv   gamepadColor2hsv(GamepadColor in);
+static GamepadColor   hsv2GamepadColor(hsv in);
+static hsv   rgb2hsv(rgb in);
+static rgb   hsv2rgb(hsv in);
+
 
 class Gamepad
 {
@@ -65,6 +98,7 @@ class Gamepad
         uint8_t            reportId;
         uint8_t            report[MAX_BT_DATA_SIZE];
         uint16_t           reportLength;
+        SemaphoreHandle_t  reportAccessMutex = xSemaphoreCreateMutex();
 
         // For data packet history
         uint8_t            lastPacket[MAX_BT_DATA_SIZE];
@@ -105,6 +139,15 @@ class Gamepad
         // Rumble timer management
         bool rumbleTimer = false;
         unsigned long rumbleEndTime;
+        // Color fading management
+        bool fadingTimer = false;
+        unsigned long fadeStartTime;
+        unsigned long fadeNextStepTime;
+        uint16_t fadingStepDuration;
+        hsv fromColor;
+        hsv toColor;
+        GamepadColor toColorRgb = PURPLE;
+
         void updateName();
 
     friend class Esp32GamepadHost;

@@ -497,11 +497,13 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         {
                             LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no device found.\n",channel);
                         }
+                        // Prevent concurrent access to report information
+                        xSemaphoreTake( gamepad->reportAccessMutex, portMAX_DELAY );
                         if(gamepad->reportType == Gamepad::ReportType::R_NONE)
                         {
                             LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
-                        LOG_INFO("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
+                        LOG_DEBUG("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
                         l2cap_reserve_packet_buffer();
                         uint8_t * out_buffer = l2cap_get_outgoing_buffer();
                         out_buffer[0] = gamepad->reportHeader;
@@ -510,6 +512,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         l2cap_send_prepared(channel,gamepad->reportLength + 2);
                         gamepad->reportLength = 0;
                         gamepad->reportType = Gamepad::ReportType::R_NONE;
+                        xSemaphoreGive(gamepad->reportAccessMutex);
                         break;
                     }
 
