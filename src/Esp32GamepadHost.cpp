@@ -71,7 +71,7 @@ GamepadCommand* Esp32GamepadHost::getCommand()
 void Esp32GamepadHost::processTasks()
 {   // Handle rumble timer and led fading
     for (int j=0; j < gamepadCount; j++){
-        return gamepads[j]->processTasks();
+        gamepads[j]->processTasks();
     }
 }
 
