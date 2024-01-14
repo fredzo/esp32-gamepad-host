@@ -69,7 +69,10 @@ GamepadCommand* Esp32GamepadHost::getCommand()
 }
 
 void Esp32GamepadHost::processTasks()
-{   // TODO : handle rumble timer
+{   // Handle rumble timer and led fading
+    for (int j=0; j < gamepadCount; j++){
+        return gamepads[j]->processTasks();
+    }
 }
 
 Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, uint32_t classOfDevice, uint16_t vendorId, uint16_t productId, uint8_t pageScanRepetitionMode, uint16_t clockOffset)

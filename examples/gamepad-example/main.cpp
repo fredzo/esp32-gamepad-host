@@ -25,11 +25,9 @@ void loop() {
          {
             rumbleState = !rumbleState;
             lastA = !lastA;
-            printf("Before Rumble with state %d.\n",rumbleState);
             uint8_t rumbleValue = rumbleState ? 0xFF : 0x00;
             command->getGamepad()->setRumble(rumbleValue,rumbleValue);
             command->getGamepad()->setLed(rumbleState ? Gamepad::WHITE : Gamepad::YELLOW);
-            printf("After Rumble !\n");
          }
          else if(command->buttons[GamepadCommand::N_B] != lastB)
          {
@@ -37,12 +35,18 @@ void loop() {
             if(lastB)
             {
                 rumbleState = !rumbleState;
-                printf("Before Rumble with state %d.\n",rumbleState);
                 uint8_t rumbleValue = rumbleState ? 0x7F : 0x00;
                 command->getGamepad()->setPlayer(rumbleState ? 1 : 0);
                 command->getGamepad()->setRumble(rumbleValue,rumbleValue);
-                printf("After Rumble !\n");
             }
+         }
+         if(command->buttons[GamepadCommand::S_OPTIONS])
+         {
+            command->getGamepad()->setRumble(0xFF,0xFF,1000);
+         }
+         if(command->buttons[GamepadCommand::S_SHARE])
+         {
+            command->getGamepad()->setRumble(0xFF,0xFF,5000);
          }
     }
     

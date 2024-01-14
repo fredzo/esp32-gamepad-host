@@ -20,8 +20,6 @@ const GamepadColor Gamepad::PLAYER_COLORS[] = {
     Gamepad::YELLOW
 };
 
-
-
 void Gamepad::setAdapter(GamepadAdapter * adapter)
 {
     this->adapter = adapter;
@@ -71,7 +69,7 @@ void Gamepad::connectionComplete()
     }
 }
 
-void Gamepad::setRumble(uint8_t left, uint8_t right)
+void Gamepad::setRumble(uint8_t left, uint8_t right, uint16_t duration)
 {
     this->rumbleLeft = left;
     this->rumbleRight = right;
@@ -79,6 +77,11 @@ void Gamepad::setRumble(uint8_t left, uint8_t right)
     if(adapter)
     {
         adapter->setRumble(this,left,right);
+        if(duration > 0)
+        {
+            rumbleTimer = true;
+            rumbleEndTime = millis() + duration;
+        }
     }
     else
     {
@@ -86,7 +89,7 @@ void Gamepad::setRumble(uint8_t left, uint8_t right)
     }
 }
 
-void Gamepad::setLed(GamepadColor color)
+void Gamepad::setLed(GamepadColor color, uint16_t fadeTime)
 {
     this->color = color;
     LOG_INFO("Setting led color to (0x%02X,0x%02X,0x%02X) for gamepad for gamepad %s.\n",this->color.red,this->color.green,this->color.blue,toString().c_str());
@@ -97,6 +100,19 @@ void Gamepad::setLed(GamepadColor color)
     else
     {
         LOG_ERROR("No adapter, setLed() impossible for gamepad %s.\n", toString().c_str());
+    }
+}
+
+void Gamepad::processTasks()
+{
+    if(rumbleTimer)
+    {
+        unsigned long now = millis();
+        if(now >= rumbleEndTime)
+        {   // Stop rumble
+            rumbleTimer = false;
+            if(adapter) adapter->setRumble(this,0,0);
+        }
     }
 }
 

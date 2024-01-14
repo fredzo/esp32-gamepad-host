@@ -45,8 +45,8 @@ class Gamepad
         static const GamepadColor PLAYER_COLORS[MAX_PLAYERS];
 
         GamepadCommand* getCommand();
-        void setRumble(uint8_t left, uint8_t right);
-        void setLed(GamepadColor color);
+        void setRumble(uint8_t left, uint8_t right, uint16_t duration = 0);
+        void setLed(GamepadColor color, uint16_t fadeTime = 0);
         void setPlayer(uint8_t playerNumber);
 
         // Index of this gamepad in the gamepadHost
@@ -85,6 +85,8 @@ class Gamepad
 
         void sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report = NULL, uint8_t reportLength = 0);
 
+        void processTasks();
+
         String getName();
         
         String toString();
@@ -100,6 +102,9 @@ class Gamepad
         GamepadCommand*  currentCommand = new GamepadCommand(this);
         GamepadAdapter*  adapter = NULL;
         String           name = UNDEFINED_ADAPTER_NAME;
+        // Rumble timer management
+        bool rumbleTimer = false;
+        unsigned long rumbleEndTime;
         void updateName();
 
     friend class Esp32GamepadHost;
