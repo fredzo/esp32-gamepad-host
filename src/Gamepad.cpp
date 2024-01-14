@@ -246,6 +246,8 @@ void Gamepad::processTasks()
         if(now >= rumbleEndTime)
         {   // Stop rumble
             rumbleTimer = false;
+            this->rumbleLeft = 0;
+            this->rumbleRight = 0;
             if(adapter) adapter->setRumble(this,0,0);
         }
     }

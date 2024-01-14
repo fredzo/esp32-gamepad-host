@@ -50,11 +50,11 @@ void loop() {
          }
          if(command->buttons[GamepadCommand::N_X])
          {
-            command->getGamepad()->setLed(Gamepad::RED,1000);
+            command->getGamepad()->setLed(Gamepad::RED,2000);
          }
          if(command->buttons[GamepadCommand::N_Y])
          {
-            command->getGamepad()->setLed(Gamepad::GREEN,1000);
+            command->getGamepad()->setLed(Gamepad::GREEN,2000);
          }
     }
     
