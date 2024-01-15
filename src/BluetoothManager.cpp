@@ -509,6 +509,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         xSemaphoreTake( gamepad->reportAccessMutex, portMAX_DELAY );
                         if(gamepad->reportType == Gamepad::ReportType::R_NONE)
                         {   // This can happen when a second report is sent on a gamepad before the first one has been sent (e.g. on fast led fading)
+                            // When the first report is sent, the report type is set to NONE and then the second L2CAP_EVENT_CAN_SEND_NOW arrives
                             LOG_DEBUG("Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
                         else
