@@ -93,7 +93,7 @@ class Gamepad
         uint16_t           l2capHidControlCid;
         uint16_t           l2capHidInterruptCid;
         // Four output reports
-        ReportType         reportType;
+        ReportType         reportType = R_NONE;
         uint8_t            reportHeader;
         uint8_t            reportId;
         uint8_t            report[MAX_BT_DATA_SIZE];
