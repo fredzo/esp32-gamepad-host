@@ -303,6 +303,7 @@ void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, cons
     }
     // Prevent concurrent access to report information
     xSemaphoreTake( reportAccessMutex, portMAX_DELAY );
+    // Check if a previous report 
     bool sendAlreadyRquested = this->reportType != R_NONE;
     this->reportType = type;
     this->reportHeader = header;
@@ -310,7 +311,7 @@ void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, cons
     if(report && (reportLength > 0)) memcpy(this->report, report, reportLength);
     this->reportLength = reportLength;
     xSemaphoreGive(reportAccessMutex);
-    if(!sendAlreadyRquested) bluetoothManagerSendReport(this);
+    /*if(!sendAlreadyRquested) */bluetoothManagerSendReport(this);
 }
 
 GamepadCommand* Gamepad::getCommand()
