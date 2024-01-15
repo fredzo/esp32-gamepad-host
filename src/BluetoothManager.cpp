@@ -146,14 +146,14 @@ static void do_connection_requests(void){
     }
 }
 
-void bluetoothManagerSendReport(Gamepad* gamepad)
+void bluetoothManagerSendReport(Gamepad* gamepad,  Gamepad::ReportType reportType)
 {
     if(gamepad == NULL)
     {
         LOG_ERROR("ERROR : sendOutputReport gamepad must not be NULL.\n");
         return;
     }
-    uint8_t result = l2cap_request_can_send_now_event(gamepad->reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
+    uint8_t result = l2cap_request_can_send_now_event(reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
     if(result)
     {
         LOG_ERROR("ERROR while asking send now event : %04x.\n", result);
@@ -501,8 +501,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         // Prevent concurrent access to report information
                         xSemaphoreTake( gamepad->reportAccessMutex, portMAX_DELAY );
                         if(gamepad->reportType == Gamepad::ReportType::R_NONE)
-                        {
-                            LOG_ERROR("ERROR : Received can send event for channel 0x%04x : no report to send.\n",channel);
+                        {   // This can happen when a second report is sent on a gamepad before the first one has been sent
+                            LOG_INFO("Received can send event for channel 0x%04x : no report to send.\n",channel);
                             return;
                         }
                         LOG_DEBUG("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
