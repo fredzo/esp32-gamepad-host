@@ -146,8 +146,6 @@ static void do_connection_requests(void){
     }
 }
 
-static btstack_timer_source_t sendReportTimer;
-
 static void sendReportTimerProces(btstack_timer_source_t *timer) {
     Gamepad* gamepad = (Gamepad*)timer->context;
     uint8_t result = l2cap_request_can_send_now_event(gamepad->reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
@@ -162,11 +160,11 @@ void bluetoothManagerSendReport(Gamepad* gamepad)
     }
     // To prevent crashes when send report is called from the mail loop on core 1 while btstack_loop runs on core 0
     // we call the send report logic from a timer that will be executed in btstack_loop
-    sendReportTimer.process = sendReportTimerProces;
-    sendReportTimer.context = gamepad;
-    btstack_run_loop_set_timer(&sendReportTimer, 0);
-    btstack_run_loop_remove_timer(&sendReportTimer);
-    btstack_run_loop_add_timer(&sendReportTimer);
+    gamepad->sendReportTimer.process = sendReportTimerProces;
+    gamepad->sendReportTimer.context = gamepad;
+    btstack_run_loop_set_timer(&gamepad->sendReportTimer, 0);
+    btstack_run_loop_remove_timer(&gamepad->sendReportTimer);
+    btstack_run_loop_add_timer(&gamepad->sendReportTimer);
 }
 
 static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint16_t size)
