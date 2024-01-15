@@ -32,10 +32,13 @@
     #endif
 #endif
 
-// Defaimt values for lib config
+// Default values for lib config
 #define DEFAULT_BT_TASK_SIZE        5*1024
 #define DEFAULT_BT_TASK_PRIORITY    1
 #define DEFAULT_BT_TASK_CORE_ID     0
+// Filters
+#define DEFAULT_FILTER_ACCEL        1
+#define DEFAULT_FILTER_TOUCHPAD     0
 
 // Max size for data packets
 #define MAX_BT_DATA_SIZE            128
@@ -49,6 +52,19 @@
 // Bluetooth class of devices
 #define CLASS_OF_DEVICE_GAMEPAD_START  0x002500
 #define CLASS_OF_DEVICE_GAMEPAD_END    0x0025FF
-#define CLASS_OF_DEVICE_WIIMOTE        0x002504
+
+
+class Config {
+    public :
+        // Bluetooth config
+        uint32_t btTaskStackDepth;
+        UBaseType_t btTaskPriority;
+        BaseType_t btTaskCoreId;
+        int maxGamepads;
+        // Filters
+        bool filterAccel;
+        bool filterTouchpad;
+};
+
 
 #endif

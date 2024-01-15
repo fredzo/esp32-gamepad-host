@@ -9,14 +9,16 @@
 class GamepadAdapterManager
 {
     public :
-        static GamepadAdapterManager *getGamepadAdapterManager();
+        static GamepadAdapterManager *getGamepadAdapterManager(Config config);
 
         GamepadAdapter* findAdapter(uint16_t vendorId, uint16_t productId, uint32_t classOfDevice);
 
     private :
         GamepadAdapter* adapters[GAMEPAD_ADAPTER_NUMBER];
         int adapterCount = 0;
-        GamepadAdapterManager();
+        Config config;
+        
+        GamepadAdapterManager(Config config);
         ~GamepadAdapterManager();
 
         void registerAdapter(GamepadAdapter* adapter);

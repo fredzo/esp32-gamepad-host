@@ -9,8 +9,11 @@ static Esp32GamepadHost* gamepadHost;
 void setup() 
 {
     // Setup
+    Config config = Esp32GamepadHost::createDefaultConfig();
+    config.filterAccel=true;
+    config.filterTouchpad=true;
     gamepadHost = Esp32GamepadHost::getEsp32GamepadHost();
-    gamepadHost->init();
+    gamepadHost->init(config);
 }
 
 static bool rumbleState = false;

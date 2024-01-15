@@ -19,7 +19,7 @@ void Esp32GamepadHost::init()
 }
 void Esp32GamepadHost::init(Config config)
 {   // TODO add filters to configuration
-    adapterManager = GamepadAdapterManager::getGamepadAdapterManager();
+    adapterManager = GamepadAdapterManager::getGamepadAdapterManager(config);
     int args[] = {config.maxGamepads};
     xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, args, config.btTaskPriority, NULL, config.btTaskCoreId);
 }

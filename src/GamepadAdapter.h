@@ -12,6 +12,7 @@
 class GamepadAdapter
 {
     public :
+        virtual void setConfig(Config config) { this->config = config; };
         virtual const char* getName() = 0;
         virtual bool match(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice) = 0;
         virtual bool isLowLevelSecurity(Gamepad* gamepad);
@@ -22,6 +23,7 @@ class GamepadAdapter
         virtual void setPlayer(Gamepad* gamepad, uint8_t playerNumber);
     protected :
         bool packetChanged(uint8_t * oldPacket, uint8_t * packet, uint8_t * mask, uint16_t packetSize);
+        Config config;
 };
 
 #endif 

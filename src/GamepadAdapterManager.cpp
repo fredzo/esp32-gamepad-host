@@ -8,16 +8,18 @@
 
 GamepadAdapterManager* GamepadAdapterManager::gamepadAdapterManager = nullptr;
 
-GamepadAdapterManager *GamepadAdapterManager::getGamepadAdapterManager()
+GamepadAdapterManager *GamepadAdapterManager::getGamepadAdapterManager(Config config)
 {
     if (gamepadAdapterManager == nullptr) {
-        gamepadAdapterManager = new GamepadAdapterManager();
+        gamepadAdapterManager = new GamepadAdapterManager(config);
     }
     return gamepadAdapterManager;
 }
 
-GamepadAdapterManager::GamepadAdapterManager()
-{   // Register adapters
+GamepadAdapterManager::GamepadAdapterManager(Config config)
+{   
+    this->config = config;
+    // Register adapters
     registerAdapter(new WiimoteAdapter());
     registerAdapter(new DS4Adapter());
 };
@@ -35,6 +37,7 @@ void GamepadAdapterManager::registerAdapter(GamepadAdapter* adapter)
 {
     if(adapterCount<GAMEPAD_ADAPTER_NUMBER)
     {
+        adapter->setConfig(config);
         adapters[adapterCount] = adapter;
         adapterCount++;
     }

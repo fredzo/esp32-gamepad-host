@@ -121,7 +121,9 @@ class DS4Adapter : public GamepadAdapter
         DS4DataExt mask;
 
     public :
-        DS4Adapter() {
+        void setConfig(Config config) {
+            GamepadAdapter::setConfig(config);
+            // Setup mask according to config
             mask.dummy0 = 0x00;
             mask.reportId = 0x00;
             mask.leftX = 0xFF;
@@ -133,12 +135,12 @@ class DS4Adapter : public GamepadAdapter
             mask.rightTrigger =0xFF;
             mask.timestamp = 0x0000;
             mask.temperature = 0x00;
-            mask.angularVelocityX = 0;//0xFFFF;
-            mask.angularVelocityY = 0;//0xFFFF;
-            mask.angularVelocityZ = 0;//0xFFFF;
-            mask.accelerationX = 0;//0xFFFF;
-            mask.accelerationY = 0;//0xFFFF;
-            mask.accelerationZ = 0;//0xFFFF;
+            mask.angularVelocityX = config.filterAccel ? 0 : 0xFFFF;
+            mask.angularVelocityY = config.filterAccel ? 0 : 0xFFFF;
+            mask.angularVelocityZ = config.filterAccel ? 0 : 0xFFFF;
+            mask.accelerationX = config.filterAccel ? 0 : 0xFFFF;
+            mask.accelerationY = config.filterAccel ? 0 : 0xFFFF;
+            mask.accelerationZ = config.filterAccel ? 0 : 0xFFFF;
             mask.dummy1 = 0x00000000;
             mask.dummy2 = 0x00000000;
             mask.status = 0xFF;
@@ -147,11 +149,11 @@ class DS4Adapter : public GamepadAdapter
             PS4TrackpadData trackpadData[4] = {0,0,0,0};
             mask.dummy4 = 0x00;
             mask.crc32 = 0x00;
-            mask.trackpadData[0].finger1Data.contact = 0xFF;
-            mask.trackpadData[0].finger1Data.x_lo = 0xFF;
-            mask.trackpadData[0].finger1Data.x_hi = 0xF;
-            mask.trackpadData[0].finger1Data.y_lo = 0xF;
-            mask.trackpadData[0].finger1Data.y_hi = 0xFF;
+            mask.trackpadData[0].finger1Data.contact = config.filterTouchpad ? 0 : 0xFF;
+            mask.trackpadData[0].finger1Data.x_lo = config.filterTouchpad ? 0 : 0xFF;
+            mask.trackpadData[0].finger1Data.x_hi = config.filterTouchpad ? 0 : 0xF;
+            mask.trackpadData[0].finger1Data.y_lo = config.filterTouchpad ? 0 : 0xF;
+            mask.trackpadData[0].finger1Data.y_hi = config.filterTouchpad ? 0 : 0xFF;
         }
 
         const char* getName() { return "Dualshock 4"; };
@@ -164,9 +166,9 @@ class DS4Adapter : public GamepadAdapter
         void connectionComplete(Gamepad* gamepad)
         {   // Request extended report (by sending a calibration feature report request)
             gamepad->sendReport(Gamepad::ReportType::R_CONTROL,FEATURE_REPORT_REQUEST_HEADER,DS4_FEATURE_REPORT_CALIBRATION);
-            /*// We need to delay sending of player led
-            gamepad->adapterState = SEND_PLAYER_LED;*/
-            GamepadAdapter::connectionComplete(gamepad);
+            // We need to delay sending of player led
+            gamepad->adapterState = SEND_PLAYER_LED;
+            //GamepadAdapter::connectionComplete(gamepad);
         };
 
         void parseButtons(GamepadCommand* command , PS4Buttons* buttons)
@@ -190,11 +192,11 @@ class DS4Adapter : public GamepadAdapter
 
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
-            /*if(gamepad->adapterState == SEND_PLAYER_LED)
+            if(gamepad->adapterState == SEND_PLAYER_LED)
             {   // First data packet => we can send player led
                 GamepadAdapter::connectionComplete(gamepad);
                 gamepad->adapterState = CONNECTED;
-            }*/
+            }
             bool changed = false;
             if(packetSize >= 2)
             {

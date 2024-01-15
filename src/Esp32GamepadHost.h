@@ -17,13 +17,6 @@ class Esp32GamepadHost
             }
             return esp32GamepadHostInstance;
         }
-        class Config {
-            public :
-                uint32_t btTaskStackDepth;
-                UBaseType_t btTaskPriority;
-                BaseType_t btTaskCoreId;
-                int maxGamepads;
-        };
 
         static Config createDefaultConfig()
         {
@@ -32,6 +25,8 @@ class Esp32GamepadHost
             defaultConfig.btTaskPriority = DEFAULT_BT_TASK_PRIORITY;
             defaultConfig.btTaskCoreId = DEFAULT_BT_TASK_CORE_ID;
             defaultConfig.maxGamepads = MAX_CONNECTED_GAMEPADS;
+            defaultConfig.filterAccel = DEFAULT_FILTER_ACCEL;
+            defaultConfig.filterTouchpad = DEFAULT_FILTER_TOUCHPAD;
             return defaultConfig;
         };
 
