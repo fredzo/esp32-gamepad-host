@@ -508,8 +508,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         // Prevent concurrent access to report information
                         xSemaphoreTake( gamepad->reportAccessMutex, portMAX_DELAY );
                         if(gamepad->reportType == Gamepad::ReportType::R_NONE)
-                        {   // This can happen when a second report is sent on a gamepad before the first one has been sent
-                            LOG_INFO("Received can send event for channel 0x%04x : no report to send.\n",channel);
+                        {   // This can happen when a second report is sent on a gamepad before the first one has been sent (e.g. on fast led fading)
+                            LOG_DEBUG("Received can send event for channel 0x%04x : no report to send.\n",channel);
                         }
                         else
                         {
