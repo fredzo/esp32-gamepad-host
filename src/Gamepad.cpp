@@ -311,8 +311,8 @@ void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, cons
     this->reportId = reportId;
     if(report && (reportLength > 0)) memcpy(this->report, report, reportLength);
     this->reportLength = reportLength;
+    bluetoothManagerSendReport(this);
     xSemaphoreGive(reportAccessMutex);
-    bluetoothManagerSendReport(this,type);
 }
 
 GamepadCommand* Gamepad::getCommand()

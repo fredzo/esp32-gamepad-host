@@ -146,18 +146,27 @@ static void do_connection_requests(void){
     }
 }
 
-void bluetoothManagerSendReport(Gamepad* gamepad,  Gamepad::ReportType reportType)
+static btstack_timer_source_t sendReportTimer;
+
+static void sendReportTimerProces(btstack_timer_source_t *timer) {
+    Gamepad* gamepad = (Gamepad*)timer->context;
+    uint8_t result = l2cap_request_can_send_now_event(gamepad->reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
+}
+
+void bluetoothManagerSendReport(Gamepad* gamepad)
 {
     if(gamepad == NULL)
     {
         LOG_ERROR("ERROR : sendOutputReport gamepad must not be NULL.\n");
         return;
     }
-    uint8_t result = l2cap_request_can_send_now_event(reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
-    if(result)
-    {
-        LOG_ERROR("ERROR while asking send now event : %04x.\n", result);
-    }
+    // To prevent crashes when send report is called from the mail loop on core 1 while btstack_loop runs on core 0
+    // we call the send report logic from a timer that will be executed in btstack_loop
+    sendReportTimer.process = sendReportTimerProces;
+    sendReportTimer.context = gamepad;
+    btstack_run_loop_set_timer(&sendReportTimer, 0);
+    btstack_run_loop_remove_timer(&sendReportTimer);
+    btstack_run_loop_add_timer(&sendReportTimer);
 }
 
 static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint16_t size)
@@ -503,17 +512,19 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         if(gamepad->reportType == Gamepad::ReportType::R_NONE)
                         {   // This can happen when a second report is sent on a gamepad before the first one has been sent
                             LOG_INFO("Received can send event for channel 0x%04x : no report to send.\n",channel);
-                            return;
                         }
-                        LOG_DEBUG("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
-                        l2cap_reserve_packet_buffer();
-                        uint8_t * out_buffer = l2cap_get_outgoing_buffer();
-                        out_buffer[0] = gamepad->reportHeader;
-                        out_buffer[1] = gamepad->reportId;
-                        if(gamepad->report && (gamepad->reportLength>0)) memcpy(out_buffer + 2, gamepad->report, gamepad->reportLength);
-                        l2cap_send_prepared(channel,gamepad->reportLength + 2);
-                        gamepad->reportLength = 0;
-                        gamepad->reportType = Gamepad::ReportType::R_NONE;
+                        else
+                        {
+                            LOG_DEBUG("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
+                            l2cap_reserve_packet_buffer();
+                            uint8_t * out_buffer = l2cap_get_outgoing_buffer();
+                            out_buffer[0] = gamepad->reportHeader;
+                            out_buffer[1] = gamepad->reportId;
+                            if(gamepad->report && (gamepad->reportLength>0)) memcpy(out_buffer + 2, gamepad->report, gamepad->reportLength);
+                            l2cap_send_prepared(channel,gamepad->reportLength + 2);
+                            gamepad->reportLength = 0;
+                            gamepad->reportType = Gamepad::ReportType::R_NONE;
+                        }
                         xSemaphoreGive(gamepad->reportAccessMutex);
                         break;
                     }
