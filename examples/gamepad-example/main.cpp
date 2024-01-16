@@ -10,7 +10,7 @@ void setup()
 {
     // Setup
     Config config = Esp32GamepadHost::createDefaultConfig();
-    config.filterAccel=true;
+    config.filterAccel=false;
     config.filterTouchpad=true;
     gamepadHost = Esp32GamepadHost::getEsp32GamepadHost();
     gamepadHost->init(config);

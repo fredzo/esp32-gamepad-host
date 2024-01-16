@@ -92,11 +92,13 @@ class WiimoteAdapter : public GamepadAdapter
                     command->buttons[GamepadCommand::WiiButtons::W_DPAD_RIGHT] = (buttonState & BUTTON_DOWN); // Wiimote horizontal
                     command->buttons[GamepadCommand::WiiButtons::W_DPAD_UP]    = (buttonState & BUTTON_RIGHT);// Wiimote horizontal
                     command->buttons[GamepadCommand::WiiButtons::W_DPAD_DOWN]  = (buttonState & BUTTON_LEFT); // Wiimote horizontal
-                    command->setChanged();
-                    if(packet[1] == 0x31)
+                    if(packet[1] == 0x31 && packetSize >= 7)
                     {   // Extended part (accelerometer)
-                        // TODO
+                        command->accel[GamepadCommand::AXES::X] = packet[4];
+                        command->accel[GamepadCommand::AXES::Y] = packet[5];
+                        command->accel[GamepadCommand::AXES::Z] = packet[6];
                     }
+                    command->setChanged();
                     return true;
                 }
             }
