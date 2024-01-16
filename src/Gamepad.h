@@ -57,10 +57,10 @@ typedef struct {
     double v;       // a fraction between 0 and 1
 } hsv;
 
-static hsv   gamepadColor2hsv(GamepadColor in);
-static GamepadColor   hsv2GamepadColor(hsv in);
-static hsv   rgb2hsv(rgb in);
-static rgb   hsv2rgb(hsv in);
+hsv   gamepadColor2hsv(GamepadColor in);
+GamepadColor   hsv2GamepadColor(hsv in);
+hsv   rgb2hsv(rgb in);
+rgb   hsv2rgb(hsv in);
 
 
 class Gamepad

@@ -19,6 +19,8 @@ void setup()
 static bool rumbleState = false;
 static bool lastA = false;
 static bool lastB = false;
+static int curColor = 0;
+static int curRumble = 0;
 void loop() {
     gamepadHost->processTasks();
     GamepadCommand* command = gamepadHost->getCommand();
@@ -58,6 +60,22 @@ void loop() {
          if(command->buttons[GamepadCommand::N_Y])
          {
             command->getGamepad()->setLed(Gamepad::GREEN,500);
+         }
+         int newColor = command->axes[GamepadCommand::AxesLeft::L_VERTICAL];
+         if(newColor != curColor)
+         {
+            curColor = newColor;
+            hsv hsvColor;
+            hsvColor.h = (((double)(newColor + 0x7F))*360)/0xFF;
+            hsvColor.s = 1;
+            hsvColor.v = 1;
+            command->getGamepad()->setLed(hsv2GamepadColor(hsvColor));
+         }
+         int newRumble = command->axes[GamepadCommand::AxesRight::R_HORIZONTAL];
+         if(newRumble != curRumble)
+         {
+            curRumble = newRumble;
+            command->getGamepad()->setRumble(curRumble < 0 ? (-curRumble-1)*2 : 0, curRumble > 0 ? (curRumble-1)*2 : 0 );
          }
     }
     
