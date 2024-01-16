@@ -18,7 +18,7 @@ void Esp32GamepadHost::init()
     init(createDefaultConfig());
 }
 void Esp32GamepadHost::init(Config config)
-{   // TODO add filters to configuration
+{
     adapterManager = GamepadAdapterManager::getGamepadAdapterManager(config);
     int args[] = {config.maxGamepads};
     xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, args, config.btTaskPriority, NULL, config.btTaskCoreId);
@@ -84,18 +84,22 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
     gamepad->classOfDevice = classOfDevice;
     gamepad->state = state;
     gamepad->index = gamepadIndex;
+    GamepadAdapter* adapter = NULL;
     if(vendorId != 0 || productId != 0 || classOfDevice != 0)
     {   // Try and find an adapter
-        GamepadAdapter* adapter = adapterManager->findAdapter(vendorId,productId,classOfDevice);
+        adapter = adapterManager->findAdapter(vendorId,productId,classOfDevice);
+    }
+    if(adapter)
+    {
         // Set adapter alse updates the name
         gamepad->setAdapter(adapter);
     }
     else
-    {
-        // Update the name with the index
+    {   // Update the name with the index
         gamepad->updateName();
         // We need a sdp report to get informations about the device
         // TODO
+        LOG_ERROR("No adapter found for gamepad: %s\n.",gamepad->toString().c_str());
     }
 
     gamepads[gamepadIndex] = gamepad;
