@@ -110,9 +110,9 @@ enum {
 };
 
 enum DS4AdapterState {
-    CONNECTING = 0,
-    SEND_PLAYER_LED,
-    CONNECTED
+    DS4_CONNECTING = 0,
+    DS4_SEND_PLAYER_LED,
+    DS4_CONNECTED
 };
 
 class DS4Adapter : public GamepadAdapter
@@ -167,7 +167,7 @@ class DS4Adapter : public GamepadAdapter
         {   // Request extended report (by sending a calibration feature report request)
             gamepad->sendReport(Gamepad::ReportType::R_CONTROL,FEATURE_REPORT_REQUEST_HEADER,DS4_FEATURE_REPORT_CALIBRATION);
             // We need to delay sending of player led
-            gamepad->adapterState = SEND_PLAYER_LED;
+            gamepad->adapterState = DS4_SEND_PLAYER_LED;
             //GamepadAdapter::connectionComplete(gamepad);
         };
 
@@ -192,10 +192,10 @@ class DS4Adapter : public GamepadAdapter
 
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
-            if(gamepad->adapterState == SEND_PLAYER_LED)
+            if(gamepad->adapterState == DS4_SEND_PLAYER_LED)
             {   // First data packet => we can send player led
                 GamepadAdapter::connectionComplete(gamepad);
-                gamepad->adapterState = CONNECTED;
+                gamepad->adapterState = DS4_CONNECTED;
             }
             bool changed = false;
             if(packetSize >= 2)
