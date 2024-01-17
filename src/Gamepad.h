@@ -21,8 +21,6 @@ class GamepadAdapter;
 
 #define FADE_STEPS              0xFF
 
-#define REPORT_FIFO_SIZE        4
-
 struct GamepadColor {
     uint8_t red;    
     uint8_t green;    
@@ -85,7 +83,7 @@ class Gamepad
                 ReportType         reportType = R_NONE;
                 uint8_t            reportHeader;
                 uint8_t            reportId;
-                uint8_t            report[MAX_BT_DATA_SIZE];
+                uint8_t            reportData[MAX_BT_DATA_SIZE];
                 uint16_t           reportLength = 0;
                 uint16_t           reportCid;
         };
@@ -107,10 +105,7 @@ class Gamepad
         uint16_t           l2capHidInterruptCid;
         // Four output reports
         SemaphoreHandle_t       reportAccessMutex = xSemaphoreCreateMutex();
-        Report                  reportFifo[REPORT_FIFO_SIZE];
-        byte                    reportFifoReadIndex = 0;
-        byte                    reportFifoWriteIndex = 0;
-        byte                    reportFifoSize = 0;
+        Report                  report;
         btstack_timer_source_t  sendReportTimer;
 
         // For data packet history
