@@ -6,6 +6,6 @@
 
 int bluetoothManagerInit(int maxConnections);
 void bluetoothManagerRun();
-void bluetoothManagerSendReport(Gamepad* gamepad);
+void bluetoothManagerSendReport(Gamepad* gamepad, uint16_t* cid);
 
 #endif

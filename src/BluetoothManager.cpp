@@ -147,11 +147,12 @@ static void do_connection_requests(void){
 }
 
 static void sendReportTimerProces(btstack_timer_source_t *timer) {
-    Gamepad* gamepad = (Gamepad*)timer->context;
-    uint8_t result = l2cap_request_can_send_now_event(gamepad->reportType == Gamepad::ReportType::R_CONTROL ? gamepad->l2capHidControlCid : gamepad->l2capHidInterruptCid);
+    uint16_t* cid = (uint16_t*)timer->context;
+    LOG_DEBUG("Request can send for cid  %d.\n", (*cid));
+    uint8_t result = l2cap_request_can_send_now_event((*cid));
 }
 
-void bluetoothManagerSendReport(Gamepad* gamepad)
+void bluetoothManagerSendReport(Gamepad* gamepad, uint16_t* cid)
 {
     if(gamepad == NULL)
     {
@@ -161,7 +162,7 @@ void bluetoothManagerSendReport(Gamepad* gamepad)
     // To prevent crashes when send report is called from the mail loop on core 1 while btstack_loop runs on core 0
     // we call the send report logic from a timer that will be executed in btstack_loop
     gamepad->sendReportTimer.process = sendReportTimerProces;
-    gamepad->sendReportTimer.context = gamepad;
+    gamepad->sendReportTimer.context = cid;
     btstack_run_loop_set_timer(&gamepad->sendReportTimer, 0);
     btstack_run_loop_remove_timer(&gamepad->sendReportTimer);
     btstack_run_loop_add_timer(&gamepad->sendReportTimer);
@@ -507,22 +508,43 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         }
                         // Prevent concurrent access to report information
                         xSemaphoreTake( gamepad->reportAccessMutex, portMAX_DELAY );
-                        if(gamepad->reportType == Gamepad::ReportType::R_NONE)
+                        if((gamepad->reportFifoSize == 0))
                         {   // This can happen when a second report is sent on a gamepad before the first one has been sent (e.g. on fast led fading)
                             // When the first report is sent, the report type is set to NONE and then the second L2CAP_EVENT_CAN_SEND_NOW arrives
-                            LOG_DEBUG("Received can send event for channel 0x%04x : no report to send.\n",channel);
+                            LOG_INFO("Received can send event for channel 0x%04x : report FIFO empty.\n",channel);
                         }
                         else
                         {
-                            LOG_DEBUG("Sending output report of length %d for gamepad %s.\n",gamepad->reportLength,gamepad->toString().c_str());
-                            l2cap_reserve_packet_buffer();
-                            uint8_t * out_buffer = l2cap_get_outgoing_buffer();
-                            out_buffer[0] = gamepad->reportHeader;
-                            out_buffer[1] = gamepad->reportId;
-                            if(gamepad->report && (gamepad->reportLength>0)) memcpy(out_buffer + 2, gamepad->report, gamepad->reportLength);
-                            l2cap_send_prepared(channel,gamepad->reportLength + 2);
-                            gamepad->reportLength = 0;
-                            gamepad->reportType = Gamepad::ReportType::R_NONE;
+                            while(gamepad->reportFifoSize > 0)
+                            {
+                                if(gamepad->reportFifo[gamepad->reportFifoReadIndex].reportType == Gamepad::ReportType::R_NONE)
+                                {   // This can happen when a second report is sent on a gamepad before the first one has been sent (e.g. on fast led fading)
+                                    // When the first report is sent, the report type is set to NONE and then the second L2CAP_EVENT_CAN_SEND_NOW arrives
+                                    LOG_INFO("Received can send event for channel 0x%04x : report type NONE, readIndex = %d, writeIndex = %d.\n",channel,gamepad->reportFifoReadIndex,gamepad->reportFifoWriteIndex);
+                                }
+                                else
+                                {
+                                    LOG_DEBUG("Sending output report of length %d (fifo size=%d) for gamepad %s.\n",gamepad->reportFifo[gamepad->reportFifoReadIndex].reportLength,gamepad->reportFifoSize,gamepad->toString().c_str());
+                                    l2cap_reserve_packet_buffer();
+                                    uint8_t * out_buffer = l2cap_get_outgoing_buffer();
+                                    out_buffer[0] = gamepad->reportFifo[gamepad->reportFifoReadIndex].reportHeader;
+                                    out_buffer[1] = gamepad->reportFifo[gamepad->reportFifoReadIndex].reportId;
+                                    if(gamepad->reportFifo[gamepad->reportFifoReadIndex].report && (gamepad->reportFifo[gamepad->reportFifoReadIndex].reportLength>0)) memcpy(out_buffer + 2, gamepad->reportFifo[gamepad->reportFifoReadIndex].report, gamepad->reportFifo[gamepad->reportFifoReadIndex].reportLength);
+                                    status = l2cap_send_prepared(channel,gamepad->reportFifo[gamepad->reportFifoReadIndex].reportLength + 2);
+                                    if(status)
+                                    {
+                                        LOG_ERROR("Error sending report on channel 0x%04x : status = (0x%02x).\n",channel,status);
+                                    }
+                                    gamepad->reportFifo[gamepad->reportFifoReadIndex].reportLength = 0;
+                                    gamepad->reportFifo[gamepad->reportFifoReadIndex].reportType = Gamepad::ReportType::R_NONE;
+                                }
+                                gamepad->reportFifoSize--;
+                                gamepad->reportFifoReadIndex++;
+                                if(gamepad->reportFifoReadIndex >= REPORT_FIFO_SIZE)
+                                {
+                                    gamepad->reportFifoReadIndex = 0;
+                                }
+                            }
                         }
                         xSemaphoreGive(gamepad->reportAccessMutex);
                         break;

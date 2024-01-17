@@ -289,7 +289,7 @@ void Gamepad::setPlayer(uint8_t playerNumber)
 }
 
 
-void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report, uint8_t reportLength)
+void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * reportData, uint8_t reportLength)
 {
     if(state != Gamepad::State::CONNECTED)
     {
@@ -306,12 +306,29 @@ void Gamepad::sendReport(ReportType type, uint8_t header, uint8_t reportId, cons
     // (on core 1) is modifiying it. It will not prevent from overwriting an unsent report. The sent report will
     // always be the last created (no queue implementation).
     xSemaphoreTake( reportAccessMutex, portMAX_DELAY );
-    this->reportType = type;
-    this->reportHeader = header;
-    this->reportId = reportId;
-    if(report && (reportLength > 0)) memcpy(this->report, report, reportLength);
-    this->reportLength = reportLength;
-    bluetoothManagerSendReport(this);
+    Report* report = &reportFifo[reportFifoWriteIndex];
+    report->reportType = type;
+    report->reportHeader = header;
+    report->reportId = reportId;
+    report->reportCid =  (type == Gamepad::ReportType::R_CONTROL) ? l2capHidControlCid : l2capHidInterruptCid;
+    if(report && (reportLength > 0)) memcpy(report->report, reportData, reportLength);
+    report->reportLength = reportLength;
+    reportFifoSize++;
+    if(reportFifoSize > REPORT_FIFO_SIZE)
+    {   // Fifo full
+        LOG_DEBUG("Report FIFO full (readIndex = %d, writeIndex = %d) for gamepad %s, next report will overwrite this one.\n",reportFifoReadIndex,reportFifoWriteIndex,toString().c_str());
+        reportFifoSize = REPORT_FIFO_SIZE;
+    }
+    else
+    {
+        reportFifoWriteIndex++;
+        if(reportFifoWriteIndex >= REPORT_FIFO_SIZE)
+        {
+            reportFifoWriteIndex = 0;
+        }
+    }
+    LOG_DEBUG("Request send for cid  %d.\n", report->reportCid);
+    bluetoothManagerSendReport(this,&(report->reportCid));
     xSemaphoreGive(reportAccessMutex);
 }
 
