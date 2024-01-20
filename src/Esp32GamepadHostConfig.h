@@ -33,7 +33,7 @@
 #endif
 
 // Default values for lib config
-#define DEFAULT_BT_TASK_SIZE        5*1024
+#define DEFAULT_BT_TASK_SIZE        4*1024
 #define DEFAULT_BT_TASK_PRIORITY    1
 #define DEFAULT_BT_TASK_CORE_ID     0
 // Filters

@@ -12,6 +12,7 @@ void setup()
     Config config = Esp32GamepadHost::createDefaultConfig();
     config.filterAccel=true;
     config.filterTouchpad=false;
+    //config.btTaskStackDepth = 4*1024;
     gamepadHost = Esp32GamepadHost::getEsp32GamepadHost();
     gamepadHost->init(config);
 }
