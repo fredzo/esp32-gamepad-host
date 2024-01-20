@@ -42,6 +42,8 @@ class GamepadCommand {
     private :
         Gamepad * gamepad;
         bool changed = false;
+
+    friend class Esp32GamepadHost;
    
 };
 #endif 
