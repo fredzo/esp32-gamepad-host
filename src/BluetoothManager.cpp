@@ -207,18 +207,26 @@ static void on_l2cap_incoming_connection(uint16_t channel, uint8_t* packet, uint
 
     LOG_DEBUG("L2CAP_EVENT_INCOMING_CONNECTION (psm=0x%04x, local_cid=0x%04x, "
     "remote_cid=0x%04x, handle=0x%04x, channel=0x%04x\n", psm, local_cid, remote_cid, handle, channel);
-    switch (psm)
-    {
-        case PSM_HID_CONTROL:
-            connectingGamepad->l2capHidControlCid = channel;
-            l2cap_accept_connection(channel);
-            break;
-        case PSM_HID_INTERRUPT:
-            connectingGamepad->l2capHidInterruptCid = channel;
-            l2cap_accept_connection(channel);
-            break;
-        default:
-            LOG_ERROR("Unknown PSM = 0x%02x\n", psm);
+    if(gamepadHost->hasRemaingGamepadSlots())
+    {   // Check that we have a free slot
+        switch (psm)
+        {
+            case PSM_HID_CONTROL:
+                connectingGamepad->l2capHidControlCid = channel;
+                l2cap_accept_connection(channel);
+                break;
+            case PSM_HID_INTERRUPT:
+                connectingGamepad->l2capHidInterruptCid = channel;
+                l2cap_accept_connection(channel);
+                break;
+            default:
+                LOG_ERROR("Unknown PSM = 0x%02x\n", psm);
+        }
+    }
+    else
+    {   // Decline connection if no slot availble
+        l2cap_decline_connection(channel);
+        LOG_INFO("No more slot available, declining connection for gamepad %s.\n",connectingGamepad->toString().c_str());
     }
 }
 
