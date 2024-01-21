@@ -90,6 +90,8 @@ static void hid_host_setup(void)
 
     // Disable stdout buffering
     setvbuf(stdin, NULL, _IONBF, 0);
+    // Try and fix issues with 0x09 error on connection open
+    Serial.setDebugOutput(true);
 
 #ifdef ENABLE_LOG_INFO
     hci_dump_init(hci_dump_embedded_stdout_get_instance());
