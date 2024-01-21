@@ -12,6 +12,7 @@ void setup()
     Config config = Esp32GamepadHost::createDefaultConfig();
     config.filterAccel=true;
     config.filterTouchpad=false;
+    //config.maxGamepads = 1;
     //config.btTaskStackDepth = 4*1024;
     gamepadHost = Esp32GamepadHost::getEsp32GamepadHost();
     gamepadHost->init(config);
@@ -25,7 +26,7 @@ static int curRumble = 0;
 void loop() {
     gamepadHost->processTasks();
     GamepadCommand* command = gamepadHost->getCommand();
-    if(command)
+    if(command && command->hasChanged())
     {
          if(command->buttons[GamepadCommand::N_A] != lastA)
          {

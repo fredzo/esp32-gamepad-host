@@ -93,6 +93,9 @@ class Gamepad
         void setLed(GamepadColor color, uint16_t fadeTime = 0);
         void setPlayer(uint8_t playerNumber);
 
+        // Bluetooth state
+        State              state;
+
         // Index of this gamepad in the gamepadHost
         int index;
 
@@ -111,9 +114,6 @@ class Gamepad
         // For data packet history
         uint8_t            lastPacket[MAX_BT_DATA_SIZE];
 
-        // Bluetooth state
-        State              state;
-
         // State for gamepad adapter state macine
         uint8_t            adapterState = 0;
 
@@ -124,6 +124,8 @@ class Gamepad
         void setAdapter(GamepadAdapter* adapter);
 
         void connectionComplete();
+
+        void connectionLost();
 
         void sendReport(ReportType type, uint8_t header, uint8_t reportId, const uint8_t * report = NULL, uint8_t reportLength = 0);
 

@@ -24,6 +24,7 @@ void Esp32GamepadHost::init(Config config)
     xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, args, config.btTaskPriority, NULL, config.btTaskCoreId);
     // Try and fix issues with 0x09 error on connection open
     Serial.setDebugOutput(true);
+    maxGamepads = config.maxGamepads;
 }
 
 int Esp32GamepadHost::getGamepadCount()
@@ -120,9 +121,17 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
 void  Esp32GamepadHost::completeConnection(Gamepad* gamepad) 
 {   // Connection successfull
     gamepad->connectionComplete();
-    connectingGamepad = NULL; 
+    connectingGamepad = NULL;
+    connectedGamepadCount++;
 }
 
+bool Esp32GamepadHost::gamepadDisconnected(Gamepad* gamepad) 
+{   // Gamepad has been disconnected
+    gamepad->connectionLost();
+    connectedGamepadCount--;
+    // Return true if no more gamepad is connected
+    return (connectedGamepadCount>0);
+}
 
 Gamepad* Esp32GamepadHost::getGamepadForAddress(bd_addr_t addr)
 {
@@ -165,10 +174,10 @@ Gamepad* Esp32GamepadHost::askGamepadConnection()
 
 bool Esp32GamepadHost::hasConnectedGamepad()
 {
-    for (int j=0; j < gamepadCount; j++){
-        if (gamepads[j]->state == Gamepad::State::CONNECTED){
-            return true;
-        }
-    }
-    return false;
+    return (connectedGamepadCount > 0);
+}
+
+bool Esp32GamepadHost::hasRemaingGamepadSlots()
+{
+    return (connectedGamepadCount < maxGamepads);
 }

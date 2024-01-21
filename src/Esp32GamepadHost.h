@@ -46,7 +46,10 @@ class Esp32GamepadHost
         Gamepad* getConnectingGamepad() { return connectingGamepad; };
         Gamepad* askGamepadConnection();
         void     completeConnection(Gamepad* gamepad);
+        /** Handle gamepad disconnection, returns true there still are connected gamepads */
+        bool     gamepadDisconnected(Gamepad* gamepad);
         bool     hasConnectedGamepad();
+        bool     hasRemaingGamepadSlots();
         void     setLastCommand(GamepadCommand* command) { lastCommand = command; };
 
     private :
@@ -66,8 +69,10 @@ class Esp32GamepadHost
 
         Gamepad* gamepads[MAX_GAMEPADS];
         GamepadCommand* lastCommand = NULL;
+        int maxGamepads;
         int gamepadCount = 0;
         int gamepadIndex = 0;
+        int connectedGamepadCount = 0;
         Gamepad* connectingGamepad = NULL;
         // Reference to adapter manager
         GamepadAdapterManager* adapterManager = NULL;

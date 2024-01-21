@@ -188,6 +188,12 @@ void Gamepad::connectionComplete()
     }
 }
 
+// Called on connection loss
+void Gamepad::connectionLost()
+{
+    state = Gamepad::State::DISCONNECTED;
+}
+
 void Gamepad::setRumble(uint8_t left, uint8_t right, uint16_t duration)
 {
     this->rumbleLeft = left;

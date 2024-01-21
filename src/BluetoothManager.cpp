@@ -41,6 +41,7 @@ enum BluetoothState {
 };
 
 static BluetoothState bluetoothState = INIT;
+bool gapInquiryRunning = false;
 
 ////////////////// Gap Inquiry
 #define INQUIRY_INTERVAL 5
@@ -51,10 +52,21 @@ static void start_scan(void){
     if(result != ERROR_CODE_SUCCESS) {
         LOG_ERROR("Inquiry failed, status 0x%02x\n", result);
     }
+    else
+    {
+        gapInquiryRunning = true;
+    }
 }
 
 static void restart_scan(void){
-    start_scan();
+    if(gamepadHost->hasRemaingGamepadSlots())
+    {
+        start_scan();
+    }
+    else
+    {
+        gapInquiryRunning = false;
+    }
 }
 
 //////////////////
@@ -221,11 +233,14 @@ static void on_l2cap_channel_closed(uint16_t channel, uint8_t* packet, int16_t s
     Gamepad* gamepad = gamepadHost->getGamepadForChannel(channel);
     if(gamepad != NULL)
     {
-        gamepad->state = Gamepad::State::DISCONNECTED;
         LOG_INFO("Gamepad disconnected: %s.\n", gamepad->toString().c_str());
-        if(!gamepadHost->hasConnectedGamepad())
+        if(!gamepadHost->gamepadDisconnected(gamepad))
         {   // No more gampads connected => go back to ready state
             bluetoothState = READY;
+        }
+        if(!gapInquiryRunning)
+        {   // Go back to pairing mode
+            start_scan();
         }
     }
 }
