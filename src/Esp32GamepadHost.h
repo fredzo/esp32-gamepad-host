@@ -50,7 +50,13 @@ class Esp32GamepadHost
         bool     gamepadDisconnected(Gamepad* gamepad);
         bool     hasConnectedGamepad();
         bool     hasRemaingGamepadSlots();
-        void     setLastCommand(GamepadCommand* command) { lastCommand = command; };
+        void     setLastCommand(GamepadCommand* command);
+
+        // Shortcut to send commands to the last communicating gamepad (ignored if no gamepad is connected)
+        void setRumble(uint8_t left, uint8_t right, uint16_t duration = 0);
+        void setLed(GamepadColor color, uint16_t fadeTime = 0);
+        void setPlayer(uint8_t playerNumber);
+
 
     private :
         Esp32GamepadHost()
@@ -68,6 +74,7 @@ class Esp32GamepadHost
         };
 
         Gamepad* gamepads[MAX_GAMEPADS];
+        Gamepad* lastGamepad = NULL;
         GamepadCommand* lastCommand = NULL;
         int maxGamepads;
         int gamepadCount = 0;

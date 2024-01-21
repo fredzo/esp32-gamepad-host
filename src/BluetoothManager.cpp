@@ -24,7 +24,7 @@ extern void btstack_init();
 #define CLASS_OF_DEVICE_WIIMOTE        0x002504
 
 // Reference to Esp32GamepadHost instance
-Esp32GamepadHost* gamepadHost;
+static Esp32GamepadHost* gamepadHost;
 
 /*************************************************************************************************/
 

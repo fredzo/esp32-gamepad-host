@@ -122,6 +122,7 @@ void  Esp32GamepadHost::completeConnection(Gamepad* gamepad)
 {   // Connection successfull
     gamepad->connectionComplete();
     connectingGamepad = NULL;
+    lastGamepad = gamepad;
     connectedGamepadCount++;
 }
 
@@ -172,6 +173,15 @@ Gamepad* Esp32GamepadHost::askGamepadConnection()
     return NULL;
 }
 
+void Esp32GamepadHost::setLastCommand(GamepadCommand* command)
+{
+    if(command)
+    {
+        lastCommand = command;
+        lastGamepad = command->gamepad;
+    }
+}
+
 bool Esp32GamepadHost::hasConnectedGamepad()
 {
     return (connectedGamepadCount > 0);
@@ -180,4 +190,19 @@ bool Esp32GamepadHost::hasConnectedGamepad()
 bool Esp32GamepadHost::hasRemaingGamepadSlots()
 {
     return (connectedGamepadCount < maxGamepads);
+}
+
+void Esp32GamepadHost::setRumble(uint8_t left, uint8_t right, uint16_t duration)
+{
+    if(lastGamepad) lastGamepad->setRumble(left,right,duration);
+}
+
+void Esp32GamepadHost::setLed(GamepadColor color, uint16_t fadeTime)
+{
+    if(lastGamepad) lastGamepad->setLed(color,fadeTime);
+}
+
+void Esp32GamepadHost::setPlayer(uint8_t playerNumber)
+{
+    if(lastGamepad) lastGamepad->setPlayer(playerNumber);
 }
