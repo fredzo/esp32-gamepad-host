@@ -22,6 +22,8 @@ void Esp32GamepadHost::init(Config config)
     adapterManager = GamepadAdapterManager::getGamepadAdapterManager(config);
     int args[] = {config.maxGamepads};
     xTaskCreatePinnedToCore(btTask, "esp32GamepadHostBtTask",config.btTaskStackDepth, args, config.btTaskPriority, NULL, config.btTaskCoreId);
+    // Try and fix issues with 0x09 error on connection open
+    Serial.setDebugOutput(true);
 }
 
 int Esp32GamepadHost::getGamepadCount()
