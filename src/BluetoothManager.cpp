@@ -88,6 +88,9 @@ static void hid_host_setup(void)
     hci_event_callback_registration.callback = &packet_handler;
     hci_add_event_handler(&hci_event_callback_registration);
 
+    // Disable stdout buffering
+    setvbuf(stdin, NULL, _IONBF, 0);
+
 #ifdef ENABLE_LOG_INFO
     hci_dump_init(hci_dump_embedded_stdout_get_instance());
 #ifndef ENABLE_LOG_DEBUG    
