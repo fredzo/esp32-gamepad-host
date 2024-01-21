@@ -1,5 +1,6 @@
 #ifndef ESP32_GAMEPAD_HOST_H
 #define ESP32_GAMEPAD_HOST_H
+
 #include <Arduino.h>
 #include <Gamepad.h>
 #include <GamepadAdapterManager.h>
@@ -46,6 +47,7 @@ class Esp32GamepadHost
         Gamepad* askGamepadConnection();
         void     completeConnection(Gamepad* gamepad);
         bool     hasConnectedGamepad();
+        void     setLastCommand(GamepadCommand* command) { lastCommand = command; };
 
     private :
         Esp32GamepadHost()
@@ -63,6 +65,7 @@ class Esp32GamepadHost
         };
 
         Gamepad* gamepads[MAX_GAMEPADS];
+        GamepadCommand* lastCommand = NULL;
         int gamepadCount = 0;
         int gamepadIndex = 0;
         Gamepad* connectingGamepad = NULL;

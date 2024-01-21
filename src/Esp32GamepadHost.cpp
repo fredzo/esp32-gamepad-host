@@ -59,13 +59,9 @@ GamepadCommand* Esp32GamepadHost::getCommandForGamepad(int index)
 
 GamepadCommand* Esp32GamepadHost::getCommand()
 {
-    for(int i = 0 ; i < gamepadCount ; i++)
+    if(lastCommand && lastCommand->changed)
     {
-        GamepadCommand* command = gamepads[i]->getCommand();
-        if(command->changed)
-        {
-            return command;
-        }
+        return lastCommand;
     }
     return NULL;
 }

@@ -7,6 +7,14 @@
 #ifndef BTSTACK_DEFAULT_CONFIG_H
 #define BTSTACK_DEFAULT_CONFIG_H
 
+// Enable BT Stack classic bluetooth
+#define ENABLE_CLASSIC
+// Enable BT Stack hex dump
+#ifdef ESP32_GAMEPAD_HOST_LOG_DEBUG
+#define ENABLE_PRINTF_HEXDUMP
+#endif
+
+
 // Classic configuration
 #ifdef ENABLE_CLASSIC
 
