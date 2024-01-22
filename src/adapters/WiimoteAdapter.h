@@ -122,6 +122,7 @@ class WiimoteAdapter : public GamepadAdapter
         void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)
         {
             bool rumble = ((left > 0) || (right > 0));
+            LOG_DEBUG("Set rumble wiimpte to %d\n",rumble);
             uint8_t payload[1];
             payload[0] = rumble ? 0x01 : 0x00;
             gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,WII_RUMBLE_REQUEST,payload,1);

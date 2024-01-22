@@ -198,7 +198,7 @@ void Gamepad::setRumble(uint8_t left, uint8_t right, uint16_t duration)
 {
     this->rumbleLeft = left;
     this->rumbleRight = right;
-    LOG_INFO("Setting rumble to (0x%02X,0x%02X) for gamepad %s.\n",left,right,toString().c_str());
+    LOG_INFO("Setting rumble to (0x%02X,0x%02X) with duration %dms for gamepad %s.\n",left,right,duration,toString().c_str());
     if(adapter)
     {
         adapter->setRumble(this,left,right);

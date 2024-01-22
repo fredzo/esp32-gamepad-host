@@ -109,7 +109,7 @@ class Gamepad
         // Four output reports
         SemaphoreHandle_t       reportAccessMutex = xSemaphoreCreateMutex();
         Report                  report;
-        btstack_timer_source_t  sendReportTimer;
+        btstack_context_callback_registration_t  sendReportCallback;
 
         // For data packet history
         uint8_t            lastPacket[MAX_BT_DATA_SIZE];

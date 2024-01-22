@@ -55,6 +55,14 @@ void loop() {
          {
             gamepadHost->setRumble(0xFF,0xFF,5000);
          }
+         if(command->buttons[GamepadCommand::W_PLUS])
+         {
+            gamepadHost->setRumble(0x7F,0x7F,250);
+         }
+         if(command->buttons[GamepadCommand::W_MINUS])
+         {
+            gamepadHost->setRumble(0xFF,0xFF,3000);
+         }
          if(command->buttons[GamepadCommand::N_X])
          {
             gamepadHost->setLed(Gamepad::RED,3000);
