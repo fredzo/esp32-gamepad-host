@@ -2,8 +2,10 @@
 #include <Esp32GamepadHostConfig.h>
 
 // Adapters
+#include <adapters/GenericAdapter.h>
 #include <adapters/WiimoteAdapter.h>
 #include <adapters/DS4Adapter.h>
+#include <adapters/SwitchAdapter.h>
 
 
 GamepadAdapterManager* GamepadAdapterManager::gamepadAdapterManager = nullptr;
@@ -20,8 +22,10 @@ GamepadAdapterManager::GamepadAdapterManager(Config config)
 {   
     this->config = config;
     // Register adapters
+    registerAdapter(new GenericAdapter());
     registerAdapter(new WiimoteAdapter());
     registerAdapter(new DS4Adapter());
+    registerAdapter(new SwitchAdapter());
 };
 
 GamepadAdapterManager::~GamepadAdapterManager()
@@ -53,6 +57,7 @@ GamepadAdapter* GamepadAdapterManager::findAdapter(uint16_t vendorId, uint16_t p
     {
         if(adapters[i]->match(vendorId,productId,classOfDevice))
         {
+            LOG_DEBUG("Match = %d for adapter %s\n",adapters[i]->match(vendorId,productId,classOfDevice), adapters[i]->getName());
             return adapters[i];
         }
     }

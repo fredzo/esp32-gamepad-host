@@ -6,6 +6,12 @@
 
 #define CLASS_OF_DEVICE_DS4             0x002508
 
+#define DS4_VENDOR_ID                   0x054c
+#define DS4_PRODUCT_ID                  0x09cc
+#define DS4_PRODUCT_ID_1                0x05c4
+#define DS4_PRODUCT_ID_2                0x05c5
+#define DS4_PRODUCT_ID_3                0x0ba0
+
 #define DS4_FEATURE_REPORT_CALIBRATION  0x02
 
 // From https://github.com/StryderUK/BluetoothHID/blob/main/examples/DualShock4/DS4Controller.h
@@ -158,9 +164,9 @@ class DS4Adapter : public GamepadAdapter
 
         const char* getName() { return "Dualshock 4"; };
         
-        bool match(uint16_t vendorId, uint16_t deviceId, uint32_t classOfDevice)
+        bool match(uint16_t vendorId, uint16_t productId, uint32_t classOfDevice)
         {
-            return classOfDevice == CLASS_OF_DEVICE_DS4;
+            return (classOfDevice == CLASS_OF_DEVICE_DS4 && vendorId == DS4_VENDOR_ID && (productId == DS4_PRODUCT_ID || productId == DS4_PRODUCT_ID_1 || productId == DS4_PRODUCT_ID_2 || productId == DS4_PRODUCT_ID_3));
         };
 
         void connectionComplete(Gamepad* gamepad)

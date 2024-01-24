@@ -188,7 +188,8 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
             break;
         case SDP_EVENT_QUERY_COMPLETE:
             if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
-            {   // VID/HID query complete => start HID query
+            {   // VID/HID query complete => update adapter accordingly
+                gamepadHost->updateAdapter(connectingGamepad);
                 LOG_INFO("Found Vendor ID: 0x%04x - Product ID: 0x%04x for gamepad %s\n",connectingGamepad->vendorId, connectingGamepad->productId, connectingGamepad->toString().c_str());
                 if(connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
                 {   // Single query => this completes the connection process

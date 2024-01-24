@@ -330,7 +330,7 @@ GamepadCommand* Gamepad::getCommand()
 
 void Gamepad::updateName()
 {
-    if(adapter)
+    if(adapter != NULL)
     {
         name = adapter->getName();
     }

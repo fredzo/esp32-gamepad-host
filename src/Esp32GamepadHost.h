@@ -40,6 +40,7 @@ class Esp32GamepadHost
         void processTasks();
 
         Gamepad* addGamepad(bd_addr_t address, Gamepad::State state, uint32_t classOfDevice = CLASS_OF_DEVICE_UNKNOWN, uint16_t vendorId = 0, uint16_t productId = 0, uint8_t pageScanRepetitionMode = 0, uint16_t clockOffset = 0);
+        bool updateAdapter(Gamepad* gamepad);
 
         Gamepad* getGamepadForAddress(bd_addr_t addr);
         Gamepad* getGamepadForChannel(uint16_t channel);

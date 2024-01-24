@@ -85,24 +85,8 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
     gamepad->productId = productId;
     gamepad->state = state;
     gamepad->index = gamepadIndex;
-    GamepadAdapter* adapter = NULL;
-    if(vendorId != 0 || productId != 0 || classOfDevice != 0)
-    {   // Try and find an adapter
-        adapter = adapterManager->findAdapter(vendorId,productId,classOfDevice);
-    }
-    if(adapter)
-    {   // Set adapter also updates the name
-        gamepad->setAdapter(adapter);
-    }
-    else
-    {   // Update the name with the index
-        gamepad->updateName();
-        // We need a sdp report to get informations about the device
-        // TODO
-        LOG_ERROR("No adapter found for gamepad: %s\n.",gamepad->toString().c_str());
-    }
-
     gamepads[gamepadIndex] = gamepad;
+    updateAdapter(gamepad);
     if((state == Gamepad::State::CONNECTING || state  == Gamepad::State::HID_QUERY || state == Gamepad::State::VID_PID_QUERY || state == Gamepad::State::SINGLE_VID_PID_QUERY) && connectingGamepad == NULL)
     {   // New connecting device
         connectingGamepad = gamepad;
@@ -117,6 +101,28 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
         gamepadCount++;
     }
     return gamepad;
+}
+
+bool Esp32GamepadHost::updateAdapter(Gamepad* gamepad)
+{
+    GamepadAdapter* adapter = NULL;
+    if(gamepad->vendorId != 0 || gamepad->productId != 0 || gamepad->classOfDevice != 0)
+    {   // Try and find an adapter
+        adapter = adapterManager->findAdapter(gamepad->vendorId,gamepad->productId,gamepad->classOfDevice);
+    }
+    if(adapter != NULL)
+    {   // Set adapter also updates the name
+        gamepad->setAdapter(adapter);
+        return true;
+    }
+    else
+    {   // Update the name with the index
+        gamepad->updateName();
+        // We need a sdp report to get informations about the device
+        // TODO
+        LOG_ERROR("No adapter found for Vendor ID: 0x%04x, Product ID: 0x%04x, COD: 0x%08x for gamepad: %s.\n",gamepad->vendorId, gamepad->productId, gamepad->classOfDevice, gamepad->toString().c_str());
+        return false;
+    }
 }
 
 void  Esp32GamepadHost::completeConnection(Gamepad* gamepad) 

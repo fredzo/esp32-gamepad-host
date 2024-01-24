@@ -8,6 +8,7 @@
 #define GAMEPAD_ADAPTER_NUMBER  2
 
 #define UINT8_TO_INT(value)     value - 0x7F            
+#define UINT16_TO_INT(msb,lsb)  (int16_t)((((uint16_t)msb << 8) | (uint16_t)lsb) - 0x8000)
 
 class GamepadAdapter
 {

@@ -110,9 +110,9 @@ void GamepadCommand::hatToDpad(uint8_t hat)
 String GamepadCommand::toString()
 {
     char buffer[128]; //                                    triggers joy L  joy R       touch    gyro     accel
-    //         gamepad[ ^ v < > A B X Y l r L R G D s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
-    sprintf(buffer,"%s[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|[%d,%d](%d,%d,%d)(%d,%d,%d)"
-    //         gamepad[ ^ v < > A B X Y l r L R G D s S H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
+    //         gamepad[ ^ v < > A B X Y l r L R G D s S - + H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
+    sprintf(buffer,"%s[%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c][%u,%u](%d,%d)(%d,%d)|%d|[%d,%d](%d,%d,%d)(%d,%d,%d)"
+    //         gamepad[ ^ v < > A B X Y l r L R G D s S - + H T][rr,ll](xx,yy)(xx,yy)|bat|[xx,yy](xx,yy,zz)(xx,yy,zz)
                           ,gamepad->getName().c_str()
                           ,buttons[N_DPAD_UP]?   '^' : ' '
                           ,buttons[N_DPAD_DOWN]? 'v' : ' '
@@ -130,6 +130,8 @@ String GamepadCommand::toString()
                           ,buttons[N_JOY_RIGHT_CLICK]?  'D' : ' '
                           ,buttons[N_START]?    's' : ' '
                           ,buttons[N_SELECT]?   'S' : ' '
+                          ,buttons[N_MINUS]?     '-' : ' '
+                          ,buttons[N_PLUS]?     '+' : ' '
                           ,buttons[N_HOME]?     'H' : ' '
                           ,buttons[N_TOUCH]?    'T' : ' '
                           ,triggers[LEFT]
