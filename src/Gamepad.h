@@ -66,8 +66,8 @@ rgb   hsv2rgb(hsv in);
 class Gamepad
 {
     public :
-        enum ReportType { R_NONE, R_INTERRUPT, R_CONTROL};
-        enum class State { CONNECTION_REQUESTED, CONNECTING, CONNECTED, DISCONNECTED };
+        enum ReportType { R_NONE = 0, R_INTERRUPT, R_CONTROL};
+        enum State { CONNECTION_REQUESTED = 0, CONNECTING, SINGLE_VID_PID_QUERY, VID_PID_QUERY, HID_QUERY, CONNECTED, DISCONNECTED };
         static const GamepadColor PURPLE;
         static const GamepadColor CYAN;
         static const GamepadColor RED;
@@ -103,6 +103,8 @@ class Gamepad
         bd_addr_t          address;
         uint8_t            pageScanRepetitionMode;
         uint16_t           clockOffset;
+        uint16_t           vendorId;
+        uint16_t           productId;
         uint32_t           classOfDevice;
         uint16_t           l2capHidControlCid;
         uint16_t           l2capHidInterruptCid;

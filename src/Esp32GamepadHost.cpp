@@ -81,6 +81,8 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
     gamepad->pageScanRepetitionMode = pageScanRepetitionMode;
     gamepad->clockOffset = clockOffset;
     gamepad->classOfDevice = classOfDevice;
+    gamepad->vendorId = vendorId;
+    gamepad->productId = productId;
     gamepad->state = state;
     gamepad->index = gamepadIndex;
     GamepadAdapter* adapter = NULL;
@@ -89,8 +91,7 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
         adapter = adapterManager->findAdapter(vendorId,productId,classOfDevice);
     }
     if(adapter)
-    {
-        // Set adapter alse updates the name
+    {   // Set adapter also updates the name
         gamepad->setAdapter(adapter);
     }
     else
@@ -102,7 +103,7 @@ Gamepad* Esp32GamepadHost::addGamepad(bd_addr_t address, Gamepad::State state, u
     }
 
     gamepads[gamepadIndex] = gamepad;
-    if(state == Gamepad::State::CONNECTING && connectingGamepad == NULL)
+    if((state == Gamepad::State::CONNECTING || state  == Gamepad::State::HID_QUERY || state == Gamepad::State::VID_PID_QUERY || state == Gamepad::State::SINGLE_VID_PID_QUERY) && connectingGamepad == NULL)
     {   // New connecting device
         connectingGamepad = gamepad;
     }

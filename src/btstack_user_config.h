@@ -61,7 +61,7 @@
 #ifdef ENABLE_CLASSIC
 
 // ACL buffer large enough for Ethernet frame in BNEP/PAN
-#define HCI_ACL_PAYLOAD_SIZE (255 + 4)
+#define HCI_ACL_PAYLOAD_SIZE (1024 + 4)
 
 // todo move to esp32
 #define HCI_HOST_ACL_PACKET_LEN (1024)

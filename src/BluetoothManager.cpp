@@ -71,6 +71,10 @@ static void restart_scan(void){
 
 //////////////////
 
+///// SDP attribute query
+#define MAX_ATTRIBUTE_VALUE_SIZE 512  // Apparently PS4 has a 470-bytes report
+static uint8_t sdp_attribute_value[MAX_ATTRIBUTE_VALUE_SIZE];
+
 
 
 /* @section Main application configuration
@@ -80,6 +84,10 @@ static void restart_scan(void){
 
 static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
 static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
+static uint8_t doVidPidRequest(Gamepad* gamepad, bool single);
+static uint8_t doHidRequest(Gamepad* gamepad);
+static void connectionProcessComplete(Gamepad* gamepad);
+
 
 static void hid_host_setup(void)
 {
@@ -125,40 +133,123 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
     UNUSED(size);
 
     uint8_t status;
+    uint16_t id16;
 
+    Gamepad* connectingGamepad = gamepadHost->getConnectingGamepad();
+    if(connectingGamepad == NULL)
+    {
+        LOG_ERROR("ERROR : SDP query event received but no device is currently connecting...\n");
+        return;
+    }
     switch (hci_event_packet_get_type(packet))
     {
-        case SDP_EVENT_QUERY_COMPLETE:
-                Gamepad* connectingGamepad = gamepadHost->getConnectingGamepad();
-                if(connectingGamepad == NULL)
+        case SDP_EVENT_QUERY_ATTRIBUTE_VALUE:
+            if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
+            {   // VID/PID query
+                if (sdp_event_query_attribute_byte_get_attribute_length(packet) <= MAX_ATTRIBUTE_VALUE_SIZE) 
                 {
-                    LOG_ERROR("ERROR : SDP query complete event received but no device is currently connecting...\n");
-                    return;
+                    sdp_attribute_value[sdp_event_query_attribute_byte_get_data_offset(packet)] = sdp_event_query_attribute_byte_get_data(packet);
+                    if ((uint16_t)(sdp_event_query_attribute_byte_get_data_offset(packet) + 1) == sdp_event_query_attribute_byte_get_attribute_length(packet)) 
+                    {   // Buffer complete
+                        switch (sdp_event_query_attribute_byte_get_attribute_id(packet)) 
+                        {
+                            case BLUETOOTH_ATTRIBUTE_VENDOR_ID:
+                                if (de_element_get_uint16(sdp_attribute_value, &id16))
+                                {
+                                    connectingGamepad->vendorId = id16;
+                                    LOG_DEBUG("Found Vendor ID: 0x%04x for gamepad %s\n",connectingGamepad->vendorId, connectingGamepad->toString().c_str());
+                                }
+                                else
+                                    LOG_ERROR("Error getting vendor id\n");
+                                break;
+
+                            case BLUETOOTH_ATTRIBUTE_PRODUCT_ID:
+                                if (de_element_get_uint16(sdp_attribute_value, &id16))
+                                {
+                                    connectingGamepad->productId = id16;
+                                    LOG_DEBUG("Found Product ID: 0x%04x for gamepad %s\n",connectingGamepad->productId, connectingGamepad->toString().c_str());
+                                }
+                                else
+                                    LOG_ERROR("Error getting product id\n");
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                } 
+                else 
+                {
+                    LOG_ERROR("SDP attribute value buffer size exceeded: available %d, required %d\n", MAX_ATTRIBUTE_VALUE_SIZE, sdp_event_query_attribute_byte_get_attribute_length(packet));
                 }
+            }
+            else { // Ignore attribute when in HUD_QUERY state
+                //LOG_DEBUG("Attribute value received in state %d for gamepad %s\n", connectingGamepad->state, connectingGamepad->toString().c_str());
+            } 
+            break;
+        case SDP_EVENT_QUERY_COMPLETE:
+            if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
+            {   // VID/HID query complete => start HID query
+                LOG_INFO("Found Vendor ID: 0x%04x - Product ID: 0x%04x for gamepad %s\n",connectingGamepad->vendorId, connectingGamepad->productId, connectingGamepad->toString().c_str());
+                if(connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
+                {   // Single query => this completes the connection process
+                    connectionProcessComplete(connectingGamepad);
+                }
+                else
+                {   // Not a single query, go on with HID query
+                    doHidRequest(connectingGamepad);
+                }
+            }
+            else if(connectingGamepad->state == Gamepad::State::HID_QUERY)
+            {   // HID query complete => create channel
                 status = l2cap_create_channel(packet_handler, connectingGamepad->address, PSM_HID_CONTROL, L2CAP_CHANNEL_MTU, &(connectingGamepad->l2capHidControlCid));
                 LOG_DEBUG("SDP_EVENT_QUERY_COMPLETE l2cap_create_channel with device index %d for cid  0x%04x and address %s : status 0x%02x\n",connectingGamepad->index, connectingGamepad->l2capHidControlCid, bd_addr_to_str(connectingGamepad->address), status);
                 if (status){
                     LOG_ERROR("Connecting to HID Control failed: 0x%02x\n", status);
                 }
+            }
+            else
+            {
+                LOG_ERROR("Received SDP complete event while in unexpected state : %d for gamepad %s\n", connectingGamepad->state, connectingGamepad->toString().c_str());
+            }
             break;
     }
 }
 
-static void do_connection_requests(void){
+static void doConnectionRequests(void) {
     Gamepad* gamepadToConnect = gamepadHost->askGamepadConnection();
     if(gamepadToConnect != NULL)
-    {   // Connect to gamepad
-        LOG_DEBUG("Connect to device for index %d.\n",gamepadToConnect->index);
-        // Set security level according to gamepad
+    {   // Set security level according to gamepad
         gap_set_security_level(gamepadToConnect->isLowLevelSecurity() ? LEVEL_0 : LEVEL_2);  
-        LOG_DEBUG("Start SDP HID query for remote HID Device with address=%s with %s security level.\n", bd_addr_to_str(gamepadToConnect->address), gamepadToConnect->isLowLevelSecurity() ? "LOW" : "HIGH");
-        uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, gamepadToConnect->address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
+        // Start VID/PID query
+        uint8_t status = doVidPidRequest(gamepadToConnect,false);
         if (status == ERROR_CODE_SUCCESS) {
             bluetoothState = CONNECTING;
         } else {
-            LOG_ERROR("Host connection failed, status 0x%02x\n", status);
-        }
+            LOG_ERROR("Failed to perform SDP VID/PID query: status 0x%02x\n", status);
+        }    
     }
+}
+
+static uint8_t doVidPidRequest(Gamepad* connectingGamepad, bool single)
+{   // Start VID/PID query
+    connectingGamepad->state = single ? Gamepad::State::SINGLE_VID_PID_QUERY : Gamepad::State::VID_PID_QUERY;
+    LOG_DEBUG("Start SDP VID/PID query for gamepad=%s with %s security level and state %d.\n", connectingGamepad->toString().c_str(), connectingGamepad->isLowLevelSecurity() ? "LOW" : "HIGH", connectingGamepad->state);
+    uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, connectingGamepad->address, BLUETOOTH_SERVICE_CLASS_PNP_INFORMATION);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOG_ERROR("Failed to perform SDP VID/PID query: status 0x%02x\n", status);
+    }    
+    return status;
+}
+
+static uint8_t doHidRequest(Gamepad* connectingGamepad)
+{   // Start HID query
+    connectingGamepad->state = Gamepad::State::HID_QUERY;
+    uint8_t status = sdp_client_query_uuid16(&handle_sdp_client_query_result, connectingGamepad->address, BLUETOOTH_SERVICE_CLASS_HUMAN_INTERFACE_DEVICE_SERVICE);
+    LOG_DEBUG("Start SDP HID query for remote HID Device with address=%s with %s security level.\n", bd_addr_to_str(connectingGamepad->address), connectingGamepad->isLowLevelSecurity() ? "LOW" : "HIGH");
+    if (status != ERROR_CODE_SUCCESS) {
+        LOG_ERROR("Host connection failed, status 0x%02x\n", status);
+    }
+    return status;
 }
 
 static void sendReportCallback(void *cidParam) {
@@ -322,14 +413,26 @@ static void on_l2cap_channel_opened(uint16_t channel, uint8_t* packet, uint16_t 
 
         case PSM_HID_INTERRUPT:
             connectingGamepad->l2capHidInterruptCid = l2cap_event_channel_opened_get_local_cid(packet);
-            // Connection successfull
-            bluetoothState = CONNECTED;
-            gamepadHost->completeConnection(connectingGamepad);
-            LOG_INFO("L2CAP interrupt channel open : connection complete fore gamepad %s.\n",connectingGamepad->toString().c_str());
-            // Check for other connections
-            do_connection_requests();
+            if(connectingGamepad->productId == 0)
+            {   // Missing VID/PID => do a single VID/PID query
+                LOG_INFO("L2CAP interrupt channel open : connection complete for gamepad %s but missing VID/PID => sending SDP query.\n",connectingGamepad->toString().c_str());
+                doVidPidRequest(connectingGamepad,true);
+            }
+            else
+            {   // Connection process finished successfully
+                connectionProcessComplete(connectingGamepad);
+            }
             break;
     }
+}
+
+void connectionProcessComplete(Gamepad* connectingGamepad)
+{
+    bluetoothState = CONNECTED;
+    gamepadHost->completeConnection(connectingGamepad);
+    LOG_INFO("L2CAP interrupt channel open : connection complete for gamepad %s.\n",connectingGamepad->toString().c_str());
+    // Check for other connections
+    doConnectionRequests();
 }
 
 /*
@@ -380,10 +483,11 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                         gamepad = gamepadHost->getGamepadForAddress(event_addr);
                         if (gamepad != NULL)
                         {   // already in our list
-                            if(gamepad->state != Gamepad::State::CONNECTED)
+                            if(gamepad->state == Gamepad::State::DISCONNECTED)
                             {   // Ask for reconnection
+                                LOG_DEBUG("Asking reconnection for gamepad %s",gamepad->toString().c_str());
                                 gamepad->state = Gamepad::State::CONNECTION_REQUESTED;
-                                do_connection_requests();
+                                doConnectionRequests();
                             }
                         }
                         else
@@ -417,7 +521,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                                     LOG_INFO(", name '%s'", name_buffer);
                                 }
                                 LOG_INFO("\n");
-                                do_connection_requests();
+                                doConnectionRequests();
                             }
                         }   
 
