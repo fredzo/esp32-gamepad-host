@@ -41,11 +41,7 @@ typedef enum {
 } Buttons3FAuxState;
 
 
-struct switch_subcmd_request {
-    // Report related
-    uint8_t transaction_type;  // type of transaction
-    uint8_t report_id;         // must be 0x01 for subcommand, 0x10 for rumble only
-
+struct SwitchSubcommandRequest {
     // Data related
     uint8_t packet_num;  // increment by 1 for each packet sent. It loops in 0x0 -
                          // 0xF range.
@@ -112,6 +108,18 @@ struct switch_rumble_amp_data {
 };
 
 
+enum {
+    OUTPUT_RUMBLE_AND_SUBCMD = 0x01,
+    OUTPUT_RUMBLE_ONLY = 0x10,
+};
+
+enum switch_subcmd {
+    SUBCMD_REQ_DEV_INFO = 0x02,
+    SUBCMD_SET_REPORT_MODE = 0x03,
+    SUBCMD_SPI_FLASH_READ = 0x10,
+    SUBCMD_SET_PLAYER_LEDS = 0x30,
+    SUBCMD_ENABLE_IMU = 0x40,
+};
 
 enum SwitchAdapterState {
     SWITCH_CONNECTING = 0,
@@ -191,12 +199,21 @@ class SwitchAdapter : public GamepadAdapter
         }
 
         void setPlayer(Gamepad* gamepad, uint8_t playerNumber)
-        { /*  // Send report to light the player led on the wiimote
+        {   // Send report to light the player led on the wiimote
             playerNumber = playerNumber % 4;
             uint8_t leds = 0b0001 << playerNumber;
-            uint8_t payload[1];
-            payload[0] = (uint8_t)(leds << 4);
-            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,0x11,payload,1);*/
+
+            // 1 == SET_LEDS subcmd len
+            uint8_t report[sizeof(struct SwitchSubcommandRequest) + 1] = {0};
+
+            struct SwitchSubcommandRequest* req = (struct SwitchSubcommandRequest*)&report[0];
+            req->subcmd_id = SUBCMD_SET_PLAYER_LEDS;
+            // LSB: turn on LEDs, MSB: flash LEDs
+            // Official Switch doesn't honor the flash bit.
+            // 8BitDo in Switch mode: LEDs are not working
+            // White-label Switch clone: works Ok with flash LEDs
+            req->data[0] = leds & 0x0f;
+            sendSubCommand(gamepad, req, sizeof(report));
         }
 
         void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)
@@ -207,6 +224,17 @@ class SwitchAdapter : public GamepadAdapter
             payload[0] = rumble ? 0x01 : 0x00;
             gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,WII_RUMBLE_REQUEST,payload,1);*/
         }
+
+        static void sendSubCommand(Gamepad* gamepad, struct SwitchSubcommandRequest* r, int len) 
+        {
+            /*
+            static uint8_t packet_num = 0;
+            r->packet_num = packet_num++;
+            if (packet_num > 0x0f)
+               packet_num = 0;*/
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,OUTPUT_RUMBLE_AND_SUBCMD,(const uint8_t*)r, len);
+        }
+
 };
 
 #endif 
