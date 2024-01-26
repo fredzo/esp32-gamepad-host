@@ -14,7 +14,7 @@
     #define LOG_DEBUG(...) (void)(0)
     #ifdef ESP32_GAMEPAD_HOST_LOG_INFO
         #define LOG_INFO(...)  printf(__VA_ARGS__)
-        #define LOG_WRRN(...)  printf(__VA_ARGS__)
+        #define LOG_WARN(...)  printf(__VA_ARGS__)
         #define LOG_ERROR(...)  printf(__VA_ARGS__)
     #else
         #define LOG_INFO(...) (void)(0)

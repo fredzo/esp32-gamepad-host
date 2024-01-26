@@ -84,7 +84,7 @@ struct switch_report_30_s {
     struct switch_imu_data_s imu[3];  // contains 3 samples differenciated by 5ms (?) each
 } __attribute__((packed));
 
-struct switch_report_21_s {
+struct SwitchSubcommandReplyReport {
     uint8_t report_id;
     uint8_t timer;
     uint8_t bat_con;
@@ -178,7 +178,15 @@ enum {
     OUTPUT_RUMBLE_ONLY = 0x10,
 };
 
-enum switch_subcmd {
+enum SwitchInputReportId {
+    /* Input Reports */
+    SWITCH_INPUT_SUBCMD_REPLY = 0x21,
+    SWITCH_INPUT_IMU_DATA = 0x30,
+    SWITCH_INPUT_MCU_DATA = 0x31,
+    SWITCH_INPUT_BUTTON_EVENT = 0x3F,
+};
+
+enum SwitchSubcommand {
     SUBCMD_REQ_DEV_INFO = 0x02,
     SUBCMD_SET_REPORT_MODE = 0x03,
     SUBCMD_SPI_FLASH_READ = 0x10,
@@ -215,6 +223,40 @@ class SwitchAdapter : public GamepadAdapter
         };
 
 
+        // Process 0x21 input report: SWITCH_INPUT_SUBCMD_REPLY
+        void processInputSubcommandReply(Gamepad* gamepad, const uint8_t* report, int len) {
+            // Report has this format:
+            // 21 D9 80 08 10 00 18 A8 78 F2 C7 70 0C 80 30 00 00 00 00 00 00 00 00 00
+            // 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            // 00
+            const struct SwitchSubcommandReplyReport* r = (const struct SwitchSubcommandReplyReport*)(report+1);
+            if ((r->ack & 0b10000000) == 0) {
+                LOG_ERROR("Switch adapter: Error, subcommand id=0x%02x was not successful.\n", r->subcmd_id);
+            }
+            switch (r->subcmd_id) 
+            {
+                case SUBCMD_SET_PLAYER_LEDS:
+                    // Nothing to do
+                    LOG_DEBUG("Switch adapter: Set player led command success.");
+                    break;
+                case SUBCMD_ENABLE_IMU:
+                    // Nothing to do
+                    LOG_DEBUG("Switch adapter: Enable IMU command success.");
+                    break;
+                case SUBCMD_SET_REPORT_MODE:
+                case SUBCMD_REQ_DEV_INFO:
+                case SUBCMD_SPI_FLASH_READ:
+                default:
+                    LOG_ERROR("Switch adapter: Error, unsupported subcmd_id=0x%02x in report 0x%02x\n", r->subcmd_id,r->report_id);
+                    break;
+            }
+
+            // Update battery
+            int battery = r->bat_con >> 5;
+            gamepad->getCommand()->battery = battery;
+            LOG_DEBUG("Switch adapter: battery level = %d.\n", battery);
+        }
+
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
             /*if(gamepad->adapterState == WII_SEND_EXTENDED_REPORT_REQUEST)
@@ -227,32 +269,51 @@ class SwitchAdapter : public GamepadAdapter
             }*/
             if(packetSize >= 4)
             {   // Check report type (0x30 for normal report 0x31 for extended report) => http://wiibrew.org/wiki/Wiimote#Data_Reporting
-                if(packet[1] == 0x3F)
-                {   // Normal report
-                    const struct Switch3FReport* switch3fReport = (const struct Switch3FReport*)&packet[2];
-                    GamepadCommand* command = gamepad->getCommand();
-                    command->clearCommand();
-                    command->buttons[GamepadCommand::SwitchButtons::SW_A] = (switch3fReport->buttons_main & SW_BUTTON_A);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_B] = (switch3fReport->buttons_main & SW_BUTTON_B);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_X] = (switch3fReport->buttons_main & SW_BUTTON_X);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_Y] = (switch3fReport->buttons_main & SW_BUTTON_Y);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_SHOULDER_LEFT]  = (switch3fReport->buttons_main & SW_BUTTON_SHOULDER_L);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_SHOULDER_RIGHT] = (switch3fReport->buttons_main & SW_BUTTON_SHOULDER_R);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_TRIGGER_LEFT]   = (switch3fReport->buttons_main & SW_BUTTON_TRIGGER_L);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_TRIGGER_RIGHT]  = (switch3fReport->buttons_main & SW_BUTTON_TRIGGER_R);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_CAPTURE] = (switch3fReport->buttons_aux & SW_BUTTON_CAPTURE);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_HOME]    = (switch3fReport->buttons_aux & SW_BUTTON_HOME);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_PLUS]    = (switch3fReport->buttons_aux & SW_BUTTON_PLUS);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_MINUS]   = (switch3fReport->buttons_aux & SW_BUTTON_MINUS);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_JOY_LEFT_CLICK]  = (switch3fReport->buttons_aux & SW_BUTTON_THUMB_L);
-                    command->buttons[GamepadCommand::SwitchButtons::SW_JOY_RIGHT_CLICK] = (switch3fReport->buttons_aux & SW_BUTTON_THUMB_R);
-                    command->axes[GamepadCommand::AxesLeft::L_HORIZONTAL]   = UINT16_TO_INT(switch3fReport->x_msb,switch3fReport->x_lsb);
-                    command->axes[GamepadCommand::AxesLeft::L_VERTICAL]     = UINT16_TO_INT(switch3fReport->y_msb,switch3fReport->y_lsb);
-                    command->axes[GamepadCommand::AxesRight::R_HORIZONTAL]  = UINT16_TO_INT(switch3fReport->rx_msb,switch3fReport->rx_lsb);
-                    command->axes[GamepadCommand::AxesRight::R_VERTICAL]    = UINT16_TO_INT(switch3fReport->ry_msb,switch3fReport->ry_lsb);
-                    command->hatToDpad(switch3fReport->hat);
-                    command->setChanged();
-                    return true;
+                switch(packet[1])
+                {  
+                    case SWITCH_INPUT_BUTTON_EVENT :
+                        {   // Normal report
+                            const struct Switch3FReport* switch3fReport = (const struct Switch3FReport*)&packet[2];
+                            GamepadCommand* command = gamepad->getCommand();
+                            command->clearCommand();
+                            command->buttons[GamepadCommand::SwitchButtons::SW_A] = (switch3fReport->buttons_main & SW_BUTTON_A);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_B] = (switch3fReport->buttons_main & SW_BUTTON_B);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_X] = (switch3fReport->buttons_main & SW_BUTTON_X);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_Y] = (switch3fReport->buttons_main & SW_BUTTON_Y);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_SHOULDER_LEFT]  = (switch3fReport->buttons_main & SW_BUTTON_SHOULDER_L);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_SHOULDER_RIGHT] = (switch3fReport->buttons_main & SW_BUTTON_SHOULDER_R);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_TRIGGER_LEFT]   = (switch3fReport->buttons_main & SW_BUTTON_TRIGGER_L);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_TRIGGER_RIGHT]  = (switch3fReport->buttons_main & SW_BUTTON_TRIGGER_R);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_CAPTURE] = (switch3fReport->buttons_aux & SW_BUTTON_CAPTURE);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_HOME]    = (switch3fReport->buttons_aux & SW_BUTTON_HOME);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_PLUS]    = (switch3fReport->buttons_aux & SW_BUTTON_PLUS);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_MINUS]   = (switch3fReport->buttons_aux & SW_BUTTON_MINUS);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_JOY_LEFT_CLICK]  = (switch3fReport->buttons_aux & SW_BUTTON_THUMB_L);
+                            command->buttons[GamepadCommand::SwitchButtons::SW_JOY_RIGHT_CLICK] = (switch3fReport->buttons_aux & SW_BUTTON_THUMB_R);
+                            command->axes[GamepadCommand::AxesLeft::L_HORIZONTAL]   = UINT16_TO_INT(switch3fReport->x_msb,switch3fReport->x_lsb);
+                            command->axes[GamepadCommand::AxesLeft::L_VERTICAL]     = UINT16_TO_INT(switch3fReport->y_msb,switch3fReport->y_lsb);
+                            command->axes[GamepadCommand::AxesRight::R_HORIZONTAL]  = UINT16_TO_INT(switch3fReport->rx_msb,switch3fReport->rx_lsb);
+                            command->axes[GamepadCommand::AxesRight::R_VERTICAL]    = UINT16_TO_INT(switch3fReport->ry_msb,switch3fReport->ry_lsb);
+                            command->hatToDpad(switch3fReport->hat);
+                            command->setChanged();
+                            return true;
+                        }
+                        break;
+                    case SWITCH_INPUT_SUBCMD_REPLY :
+                        {
+                            processInputSubcommandReply(gamepad,packet,packetSize);
+                            return true;
+                        }
+                        break;
+                    case SWITCH_INPUT_IMU_DATA :
+                        {   // TODO
+
+                        }
+                        break;
+                    case SWITCH_INPUT_MCU_DATA :
+                    default :
+                        LOG_WARN("Switch Adapter packet : unsupported reportId 0x%02x\n",packet[0]);
+
                 }
             }
             else
@@ -293,7 +354,7 @@ class SwitchAdapter : public GamepadAdapter
                 encodeRumble(req.rumble_left, left << 2, left, 500);
                 encodeRumble(req.rumble_right, right << 2, right, 500);
 
-                // Rumble request don't include the last byte of "switch_subcmd_request": subcmd_id
+                // Rumble request don't include the last byte of "SwitchSubcommandRequest": subcmd_id
                 sendSubCommand(gamepad,OUTPUT_RUMBLE_ONLY, &req, sizeof(req) - 1);
             }
         }
@@ -345,7 +406,7 @@ class SwitchAdapter : public GamepadAdapter
             memcpy(req.rumble_left, rumble_default, sizeof(req.rumble_left));
             memcpy(req.rumble_right, rumble_default, sizeof(req.rumble_left));
 
-            // Rumble request don't include the last byte of "switch_subcmd_request": subcmd_id
+            // Rumble request don't include the last byte of "SwitchSubcommandRequest": subcmd_id
             sendSubCommand(gamepad,OUTPUT_RUMBLE_ONLY,(struct SwitchSubcommandRequest*)&req, sizeof(req) - 1);
         }
 
