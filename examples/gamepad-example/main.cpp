@@ -72,7 +72,7 @@ void loop() {
             gamepadHost->setLed(Gamepad::GREEN,500);
          }
          int newColor = command->axes[GamepadCommand::AxesLeft::L_VERTICAL];
-         if(newColor != curColor)
+         if(abs(newColor-curColor)>10)
          {
             curColor = newColor;
             hsv hsvColor;
@@ -82,7 +82,7 @@ void loop() {
             command->getGamepad()->setLed(hsv2GamepadColor(hsvColor));
          }
          int newRumble = command->axes[GamepadCommand::AxesRight::R_HORIZONTAL];
-         if(newRumble != curRumble)
+         if(abs(newRumble-curRumble)>10)
          {
             curRumble = newRumble;
             command->getGamepad()->setRumble(curRumble < 0 ? (-curRumble-1)*2 : 0, curRumble > 0 ? (curRumble-1)*2 : 0 );

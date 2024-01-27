@@ -13,11 +13,6 @@
 #define SWITCH_PRODUCT_ID_2                 0x2009
 #define SWITCH_PRODUCT_ID_3                 0x2017
 
-#define WII_DATA_REPORTING_REQUEST          0x12
-#define WII_DATA_REPORTING_MODE_EXTENDED    0x31
-
-#define WII_RUMBLE_REQUEST                  0x10
-
 // From https://github.com/ricardoquesada/bluepad32/blob/af7f6570c4279f268e583e3750c16d2bc80ad6bc/src/components/bluepad32/uni_hid_parser_switch.c
 
 typedef enum {
@@ -65,12 +60,12 @@ struct Switch3FReport {
     uint8_t ry_msb;
 } __attribute__((packed));
 
-struct switch_imu_data_s {
+struct SwitchImuData {
     int16_t accel[3];  // x, y, z
     int16_t gyro[3];   // x, y, z
 } __attribute__((packed));
 
-struct switch_buttons_s {
+struct SwitchButtons {
     uint8_t buttons_right;
     uint8_t buttons_misc;
     uint8_t buttons_left;
@@ -79,16 +74,16 @@ struct switch_buttons_s {
     uint8_t vibrator_report;
 } __attribute__((packed));
 
-struct switch_report_30_s {
-    struct switch_buttons_s buttons;
-    struct switch_imu_data_s imu[3];  // contains 3 samples differenciated by 5ms (?) each
+struct Switch30Report {
+    struct SwitchButtons buttons;
+    struct SwitchImuData imu[3];  // contains 3 samples differenciated by 5ms (?) each
 } __attribute__((packed));
 
 struct SwitchSubcommandReplyReport {
     uint8_t report_id;
     uint8_t timer;
     uint8_t bat_con;
-    struct switch_buttons_s status;
+    struct SwitchButtons status;
     uint8_t ack;
     uint8_t subcmd_id;
     uint8_t data[0];
@@ -187,6 +182,7 @@ enum SwitchInputReportId {
 };
 
 enum SwitchSubcommand {
+    SUBCMD_REPORT_ID = 0x01,
     SUBCMD_REQ_DEV_INFO = 0x02,
     SUBCMD_SET_REPORT_MODE = 0x03,
     SUBCMD_SPI_FLASH_READ = 0x10,
@@ -196,7 +192,8 @@ enum SwitchSubcommand {
 
 enum SwitchAdapterState {
     SWITCH_CONNECTING = 0,
-    SWITCH_SEND_EXTENDED_REPORT_REQUEST,
+    SWITCH_SEND_FULL_REPORT_REQUEST,
+    SWITCH_SEND_IMU_REPORT_REQUEST,
     SWITCH_CONNECTED
 };
 
@@ -204,7 +201,30 @@ enum SwitchAdapterState {
 
 class SwitchAdapter : public GamepadAdapter
 {
+    private :
+        Switch30Report mask;
     public :
+        void setConfig(Config config) {
+            GamepadAdapter::setConfig(config);
+            // Setup mask according to config
+            memset(&mask,0x00,sizeof(mask));
+            mask.buttons.buttons_right = 0xFF;
+            mask.buttons.buttons_misc = 0xFF;
+            mask.buttons.buttons_left = 0xFF;
+            mask.buttons.stick_left[0] = 0xFF;
+            mask.buttons.stick_left[1] = 0xFF;
+            mask.buttons.stick_left[2] = 0xFF;
+            mask.buttons.stick_right[0] = 0xFF;
+            mask.buttons.stick_right[1] = 0xFF;
+            mask.buttons.stick_right[2] = 0xFF;
+            mask.imu[0].accel[0] = 0xFF;
+            mask.imu[0].accel[1] = 0xFF;
+            mask.imu[0].accel[2] = 0xFF;
+            mask.imu[0].gyro[0] = 0xFF;
+            mask.imu[0].gyro[1] = 0xFF;
+            mask.imu[0].gyro[2] = 0xFF;
+        }
+
         const char* getName() { return "Switch Joycon"; };
 
         bool match(uint16_t vendorId, uint16_t productId, uint32_t classOfDevice)
@@ -216,10 +236,10 @@ class SwitchAdapter : public GamepadAdapter
         {   // Set player led
             GamepadAdapter::connectionComplete(gamepad);
             // Request extended report if needed
-            /*if(!config.filterAccel)
+            if(!config.filterAccel)
             {   // We need to delay sending the request
-                gamepad->adapterState = WII_SEND_EXTENDED_REPORT_REQUEST;
-            }*/
+                gamepad->adapterState = SWITCH_SEND_FULL_REPORT_REQUEST;
+            }
         };
 
 
@@ -237,14 +257,20 @@ class SwitchAdapter : public GamepadAdapter
             {
                 case SUBCMD_SET_PLAYER_LEDS:
                     // Nothing to do
-                    LOG_DEBUG("Switch adapter: Set player led command success.");
+                    LOG_DEBUG("Switch adapter: Set player led command success.\n");
                     break;
                 case SUBCMD_ENABLE_IMU:
                     // Nothing to do
-                    LOG_DEBUG("Switch adapter: Enable IMU command success.");
+                    LOG_DEBUG("Switch adapter: Enable IMU command success.\n");
+                    break;
+                case SUBCMD_REQ_DEV_INFO:
+                    // Nothing to do
+                    LOG_DEBUG("Switch adapter: Device info command success.\n");
                     break;
                 case SUBCMD_SET_REPORT_MODE:
-                case SUBCMD_REQ_DEV_INFO:
+                    // Nothing to do
+                    LOG_DEBUG("Switch adapter: Set report mode command success.\n");
+                    break;
                 case SUBCMD_SPI_FLASH_READ:
                 default:
                     LOG_ERROR("Switch adapter: Error, unsupported subcmd_id=0x%02x in report 0x%02x\n", r->subcmd_id,r->report_id);
@@ -259,14 +285,16 @@ class SwitchAdapter : public GamepadAdapter
 
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
-            /*if(gamepad->adapterState == WII_SEND_EXTENDED_REPORT_REQUEST)
-            {   // We need to send an extended report request
-                uint8_t payload[2];
-                payload[0] = 0x00; // Non continous report
-                payload[1] = WII_DATA_REPORTING_MODE_EXTENDED;
-                gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,WII_DATA_REPORTING_REQUEST,payload,2);
-                gamepad->adapterState = WII_CONNECTED;
-            }*/
+            if(gamepad->adapterState == SWITCH_SEND_FULL_REPORT_REQUEST)
+            {   // We need to send an IMU report request
+                requestFullReport(gamepad);
+                gamepad->adapterState = SWITCH_SEND_IMU_REPORT_REQUEST;
+            }
+            else if(gamepad->adapterState == SWITCH_SEND_IMU_REPORT_REQUEST)
+            {   // We need to send an IMU report request
+                requestImu(gamepad);
+                gamepad->adapterState = SWITCH_CONNECTED;
+            }
             if(packetSize >= 4)
             {   // Check report type (0x30 for normal report 0x31 for extended report) => http://wiibrew.org/wiki/Wiimote#Data_Reporting
                 switch(packet[1])
@@ -306,8 +334,64 @@ class SwitchAdapter : public GamepadAdapter
                         }
                         break;
                     case SWITCH_INPUT_IMU_DATA :
-                        {   // TODO
+                        {
+                            // Extended report => filter to ignore non relevant data
+                            bool changed = packetChanged((gamepad->lastPacket)+4,packet+4,(uint8_t*)(&mask),sizeof(mask));
+                            if(changed)
+                            {
+                                const struct Switch30Report* r = (const struct Switch30Report*)&packet[4];
+                                GamepadCommand* command = gamepad->getCommand();
+                                command->clearCommand();
+                                // Buttons "right"
+                                command->buttons[GamepadCommand::SwitchButtons::SW_Y]= (r->buttons.buttons_right & 0b00000001);           // Y
+                                command->buttons[GamepadCommand::SwitchButtons::SW_X]= (r->buttons.buttons_right & 0b00000010);           // X
+                                command->buttons[GamepadCommand::SwitchButtons::SW_B]= (r->buttons.buttons_right & 0b00000100);           // B
+                                command->buttons[GamepadCommand::SwitchButtons::SW_A]= (r->buttons.buttons_right & 0b00001000);           // A
+                                command->buttons[GamepadCommand::SwitchButtons::SW_SHOULDER_RIGHT]= (r->buttons.buttons_right & 0b01000000);  // R
+                                command->buttons[GamepadCommand::SwitchButtons::SW_TRIGGER_RIGHT]= (r->buttons.buttons_right & 0b10000000);   // ZR
 
+                                // Buttons "left"
+                                command->buttons[GamepadCommand::SwitchButtons::SW_DPAD_DOWN]= (r->buttons.buttons_left & 0b00000001);
+                                command->buttons[GamepadCommand::SwitchButtons::SW_DPAD_UP]= (r->buttons.buttons_left & 0b00000010);
+                                command->buttons[GamepadCommand::SwitchButtons::SW_DPAD_RIGHT]= (r->buttons.buttons_left & 0b00000100);
+                                command->buttons[GamepadCommand::SwitchButtons::SW_DPAD_LEFT]= (r->buttons.buttons_left & 0b00001000);
+                                command->buttons[GamepadCommand::SwitchButtons::SW_SHOULDER_LEFT]= (r->buttons.buttons_left & 0b01000000);  // L
+                                command->buttons[GamepadCommand::SwitchButtons::SW_TRIGGER_LEFT]= (r->buttons.buttons_left & 0b10000000);   // ZL
+
+                                // Misc
+                                command->buttons[GamepadCommand::SwitchButtons::SW_MINUS]= (r->buttons.buttons_misc & 0b00000001);   // -
+                                command->buttons[GamepadCommand::SwitchButtons::SW_PLUS]= (r->buttons.buttons_misc & 0b00000010);    // +
+                                command->buttons[GamepadCommand::SwitchButtons::SW_HOME]= (r->buttons.buttons_misc & 0b00010000);    // Home
+                                command->buttons[GamepadCommand::SwitchButtons::SW_CAPTURE]= (r->buttons.buttons_misc & 0b00100000); // Capture
+
+                                // Thumbs
+                                command->buttons[GamepadCommand::SwitchButtons::SW_JOY_RIGHT_CLICK]= (r->buttons.buttons_misc & 0b00000100);  // Thumb R
+                                command->buttons[GamepadCommand::SwitchButtons::SW_JOY_LEFT_CLICK] = (r->buttons.buttons_misc & 0b00001000);  // Thumb L
+
+                                // Stick left
+                                uint16_t lx = r->buttons.stick_left[0] | ((r->buttons.stick_left[1] & 0x0f) << 8);
+                                uint16_t ly = (r->buttons.stick_left[1] >> 4) | (r->buttons.stick_left[2] << 4);
+                                command->axes[GamepadCommand::AxesLeft::L_HORIZONTAL]   = ((int16_t)lx) - 0x800;
+                                command->axes[GamepadCommand::AxesLeft::L_VERTICAL]     = ((int16_t)ly) - 0x800;
+
+                                // Stick right
+                                uint16_t rx = r->buttons.stick_right[0] | ((r->buttons.stick_right[1] & 0x0f) << 8);
+                                uint16_t ry = (r->buttons.stick_right[1] >> 4) | (r->buttons.stick_right[2] << 4);
+                                command->axes[GamepadCommand::AxesRight::R_HORIZONTAL]  = ((int16_t)rx) - 0x800;
+                                command->axes[GamepadCommand::AxesRight::R_VERTICAL]    = ((int16_t)ry) - 0x800;
+
+                                // IMU
+                                const SwitchImuData* imu = &(r->imu[2]);
+                                command->gyro[GamepadCommand::AXES::X] = imu->accel[0];
+                                command->gyro[GamepadCommand::AXES::Y] = imu->accel[1];
+                                command->gyro[GamepadCommand::AXES::Z] = imu->accel[2];
+                                command->accel[GamepadCommand::AXES::X] = imu->gyro[0];
+                                command->accel[GamepadCommand::AXES::Y] = imu->gyro[1];
+                                command->accel[GamepadCommand::AXES::Z] = imu->gyro[2];
+
+                                command->setChanged();
+                            }
+                            return changed;
                         }
                         break;
                     case SWITCH_INPUT_MCU_DATA :
@@ -408,6 +492,32 @@ class SwitchAdapter : public GamepadAdapter
 
             // Rumble request don't include the last byte of "SwitchSubcommandRequest": subcmd_id
             sendSubCommand(gamepad,OUTPUT_RUMBLE_ONLY,(struct SwitchSubcommandRequest*)&req, sizeof(req) - 1);
+        }
+
+        void requestDeviceInfo(Gamepad* gamepad) {
+            LOG_DEBUG("Switch adapter: Send device info request.\n");
+            struct SwitchSubcommandRequest req = {
+                .subcmd_id = SUBCMD_REQ_DEV_INFO,
+            };
+            sendSubCommand(gamepad, SUBCMD_REPORT_ID, &req, sizeof(req));
+        }
+
+        void requestFullReport(Gamepad* gamepad) {
+            LOG_DEBUG("Switch adapter: Send full report request.\n");
+            uint8_t out[sizeof(struct SwitchSubcommandRequest) + 1] = {0};
+            struct SwitchSubcommandRequest* req = (struct SwitchSubcommandRequest*)&out[0];
+            req->subcmd_id = SUBCMD_SET_REPORT_MODE;
+            req->data[0] = 0x30; // Full report
+            sendSubCommand(gamepad, SUBCMD_REPORT_ID, req, sizeof(out));
+        }
+
+        void requestImu(Gamepad* gamepad) {
+            LOG_DEBUG("Switch adapter: Send IMU request.\n");
+            uint8_t out[sizeof(struct SwitchSubcommandRequest) + 1] = {0};
+            struct SwitchSubcommandRequest* req = (struct SwitchSubcommandRequest*)&out[0];
+            req->subcmd_id = SUBCMD_ENABLE_IMU;
+            req->data[0] = 0x01;
+            sendSubCommand(gamepad, SUBCMD_REPORT_ID, req, sizeof(out));
         }
 
         void sendSubCommand(Gamepad* gamepad, uint8_t reportId ,struct SwitchSubcommandRequest* r, int len) 
