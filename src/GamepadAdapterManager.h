@@ -4,7 +4,7 @@
 #include <GamepadAdapter.h>
 #include <Esp32GamepadHostConfig.h>
 
-#define GAMEPAD_ADAPTER_NUMBER  4
+#define GAMEPAD_ADAPTER_NUMBER  5
 
 class GamepadAdapterManager
 {

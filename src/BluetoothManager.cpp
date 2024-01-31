@@ -144,47 +144,76 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
     switch (hci_event_packet_get_type(packet))
     {
         case SDP_EVENT_QUERY_ATTRIBUTE_VALUE:
-            if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
-            {   // VID/PID query
-                if (sdp_event_query_attribute_byte_get_attribute_length(packet) <= MAX_ATTRIBUTE_VALUE_SIZE) 
-                {
-                    sdp_attribute_value[sdp_event_query_attribute_byte_get_data_offset(packet)] = sdp_event_query_attribute_byte_get_data(packet);
-                    if ((uint16_t)(sdp_event_query_attribute_byte_get_data_offset(packet) + 1) == sdp_event_query_attribute_byte_get_attribute_length(packet)) 
-                    {   // Buffer complete
-                        switch (sdp_event_query_attribute_byte_get_attribute_id(packet)) 
-                        {
-                            case BLUETOOTH_ATTRIBUTE_VENDOR_ID:
+            if (sdp_event_query_attribute_byte_get_attribute_length(packet) <= MAX_ATTRIBUTE_VALUE_SIZE) 
+            {
+                sdp_attribute_value[sdp_event_query_attribute_byte_get_data_offset(packet)] = sdp_event_query_attribute_byte_get_data(packet);
+                if ((uint16_t)(sdp_event_query_attribute_byte_get_data_offset(packet) + 1) == sdp_event_query_attribute_byte_get_attribute_length(packet)) 
+                {   // Buffer complete
+                    switch (sdp_event_query_attribute_byte_get_attribute_id(packet)) 
+                    {
+                        case BLUETOOTH_ATTRIBUTE_VENDOR_ID:
+                            if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
+                            {
                                 if (de_element_get_uint16(sdp_attribute_value, &id16))
                                 {
                                     connectingGamepad->vendorId = id16;
                                     LOG_DEBUG("Found Vendor ID: 0x%04x for gamepad %s\n",connectingGamepad->vendorId, connectingGamepad->toString().c_str());
                                 }
                                 else
-                                    LOG_ERROR("Error getting vendor id\n");
-                                break;
+                                    LOG_ERROR("Error getting vendor id, size was %d\n", de_get_size_type(sdp_attribute_value));
+                            }
+                            break;
 
-                            case BLUETOOTH_ATTRIBUTE_PRODUCT_ID:
+                        case BLUETOOTH_ATTRIBUTE_PRODUCT_ID:
+                            if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)
+                            {
                                 if (de_element_get_uint16(sdp_attribute_value, &id16))
                                 {
                                     connectingGamepad->productId = id16;
                                     LOG_DEBUG("Found Product ID: 0x%04x for gamepad %s\n",connectingGamepad->productId, connectingGamepad->toString().c_str());
                                 }
                                 else
-                                    LOG_ERROR("Error getting product id\n");
-                                break;
-                            default:
-                                break;
-                        }
+                                    LOG_ERROR("Error getting product id, size was %d\n", de_get_size_type(sdp_attribute_value));
+                            }
+                            break;
+                        case BLUETOOTH_ATTRIBUTE_HID_DESCRIPTOR_LIST:
+                            {
+                            #ifdef ESP32_GAMEPAD_HOST_LOG_DEBUG    
+                            des_iterator_t attribute_list_it;
+                            des_iterator_t additional_des_it;
+                            uint8_t* des_element;
+                            uint8_t* element;
+
+                            for (des_iterator_init(&attribute_list_it, sdp_attribute_value);
+                                des_iterator_has_more(&attribute_list_it); des_iterator_next(&attribute_list_it)) {
+                                if (des_iterator_get_type(&attribute_list_it) != DE_DES)
+                                    continue;
+                                des_element = des_iterator_get_element(&attribute_list_it);
+                                for (des_iterator_init(&additional_des_it, des_element);
+                                    des_iterator_has_more(&additional_des_it); des_iterator_next(&additional_des_it)) {
+                                    if (des_iterator_get_type(&additional_des_it) != DE_STRING)
+                                        continue;
+                                    element = des_iterator_get_element(&additional_des_it);
+                                    const uint8_t* descriptor = de_get_string(element);
+                                    int descriptor_len = de_get_data_size(element);
+                                    LOG_DEBUG("SDP HID Descriptor (%d):\n", descriptor_len);
+                                    printf_hexdump(descriptor, descriptor_len);
+                                }
+                            }
+                            #endif
+                            }
+                            break;
+                        default:
+                            //LOG_DEBUG("Attribute value received in state %d for gamepad %s\n", connectingGamepad->state, connectingGamepad->toString().c_str());
+                            //LOG_DEBUG("%02x ", sdp_event_query_attribute_byte_get_data(packet));
+                            break;
                     }
-                } 
-                else 
-                {
-                    LOG_ERROR("SDP attribute value buffer size exceeded: available %d, required %d\n", MAX_ATTRIBUTE_VALUE_SIZE, sdp_event_query_attribute_byte_get_attribute_length(packet));
                 }
-            }
-            else { // Ignore attribute when in HUD_QUERY state
-                //LOG_DEBUG("Attribute value received in state %d for gamepad %s\n", connectingGamepad->state, connectingGamepad->toString().c_str());
             } 
+            else 
+            {
+                LOG_ERROR("SDP attribute value buffer size exceeded: available %d, required %d\n", MAX_ATTRIBUTE_VALUE_SIZE, sdp_event_query_attribute_byte_get_attribute_length(packet));
+            }
             break;
         case SDP_EVENT_QUERY_COMPLETE:
             if(connectingGamepad->state == Gamepad::State::VID_PID_QUERY || connectingGamepad->state == Gamepad::State::SINGLE_VID_PID_QUERY)

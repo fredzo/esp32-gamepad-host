@@ -402,7 +402,7 @@ class SwitchAdapter : public GamepadAdapter
             }
             else
             {
-                LOG_ERROR("Wrong packet size for Wiimote : %d\n",packetSize);
+                LOG_ERROR("Wrong packet size for Switch adapter : %d\n",packetSize);
                 LOG_HEXDUMP(packet,packetSize);
             }
             return false;

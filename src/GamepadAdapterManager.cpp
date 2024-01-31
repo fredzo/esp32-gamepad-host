@@ -6,6 +6,7 @@
 #include <adapters/WiimoteAdapter.h>
 #include <adapters/DS4Adapter.h>
 #include <adapters/SwitchAdapter.h>
+#include <adapters/XBoxOneAdapter.h>
 
 
 GamepadAdapterManager* GamepadAdapterManager::gamepadAdapterManager = nullptr;
@@ -26,6 +27,7 @@ GamepadAdapterManager::GamepadAdapterManager(Config config)
     registerAdapter(new WiimoteAdapter());
     registerAdapter(new DS4Adapter());
     registerAdapter(new SwitchAdapter());
+    registerAdapter(new XBoxOneAdapter());
 };
 
 GamepadAdapterManager::~GamepadAdapterManager()

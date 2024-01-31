@@ -6,6 +6,9 @@
 #include <Gamepad.h>
 
 #define UINT8_TO_INT(value)     value - 0x7F            
+#define UINT10_TO_UINT(msb,lsb) (int16_t)((((uint16_t)(msb & 0x03) << 8) | (uint16_t)lsb))
+#define UINT10_TO_INT(msb,lsb)  (int16_t)((((uint16_t)(msb & 0x03) << 8) | (uint16_t)lsb) - 0x1FF)
+#define UINT16_TO_UINT(msb,lsb) (int16_t)((((uint16_t)msb << 8) | (uint16_t)lsb))
 #define UINT16_TO_INT(msb,lsb)  (int16_t)((((uint16_t)msb << 8) | (uint16_t)lsb) - 0x8000)
 
 class GamepadAdapter
