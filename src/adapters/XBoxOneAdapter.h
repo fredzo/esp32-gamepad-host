@@ -12,6 +12,8 @@
 #define XBOX_ONE_PRODUCT_ID                 0x02e0
 #define XBOX_ONE_PRODUCT_ID_1               0x0402
 
+#define XBOX_RUMBLE_REPORT_ID               0x03
+
 typedef enum {
     XB_BUTTON_HOME       = 0b00000001, 
     XBA_BUTTON_HOME      = 0b10000000, 
@@ -80,6 +82,28 @@ struct XBox07Report {
     uint8_t buttons2;
     uint8_t tl;
     uint8_t tr;
+} __attribute__((packed));
+
+
+// Actuators for the force feedback (FF).
+enum {
+    FF_RIGHT = 1 << 0,
+    FF_LEFT = 1 << 1,
+    FF_TRIGGER_RIGHT = 1 << 2,
+    FF_TRIGGER_LEFT = 1 << 3,
+};
+
+
+struct XBoxFFReport {
+    // Force-feedback related
+    uint8_t enable_actuators;    // LSB 0-3 for each actuator
+    uint8_t force_left_trigger;  // HID descriptor says that it goes from 0-100
+    uint8_t force_right_trigger;
+    uint8_t force_left;
+    uint8_t force_right;
+    uint8_t duration;  // unknown unit, 255 is ~second
+    uint8_t start_delay;
+    uint8_t loop_count;  // how many times "duration" is repeated
 } __attribute__((packed));
 
 
@@ -223,16 +247,24 @@ class XBoxOneAdapter : public GamepadAdapter
             return false;
         }
 
-        void setPlayer(Gamepad* gamepad, uint8_t playerNumber)
-        {   // Send report to light the player led on the wiimote
-            playerNumber = playerNumber % 4;
-            uint8_t leds = 0b0001 << playerNumber;
-            //TODO
-        }
-
         void setRumble(Gamepad* gamepad, uint8_t left, uint8_t right)
         {
-            // TODO
+            // Range is 0-100, but use 1-100 since 0 won't turn rumble off...
+            left = map(left, 0, 0xFF, 1, 100);
+            right = map(right, 0, 0xFF, 1, 100);
+
+            struct XBoxFFReport ff = {
+                .enable_actuators = FF_RIGHT | FF_LEFT | FF_TRIGGER_LEFT | FF_TRIGGER_RIGHT,
+                .force_left_trigger = left,
+                .force_right_trigger = right,
+                .force_left = left,
+                .force_right = right,
+                .duration = 0xFF,
+                .start_delay = 0,
+                .loop_count = 0xFF,
+            };
+
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,XBOX_RUMBLE_REPORT_ID,(const uint8_t*)&ff, sizeof(ff));
         }
 
 };
