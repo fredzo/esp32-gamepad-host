@@ -16,6 +16,8 @@ class GamepadAdapter;
 #define OUTPUT_REPORT_HEADER            ((HID_MESSAGE_TYPE_DATA << 4) | HID_REPORT_TYPE_OUTPUT)
 // Report header for feature report request
 #define FEATURE_REPORT_REQUEST_HEADER   ((HID_MESSAGE_TYPE_GET_REPORT << 4) | HID_REPORT_TYPE_FEATURE)
+// Report header for input report request
+#define INPUT_REPORT_REQUEST_HEADER   ((HID_MESSAGE_TYPE_GET_REPORT << 4) | HID_REPORT_TYPE_INPUT)
 
 #define MAX_PLAYERS             6
 

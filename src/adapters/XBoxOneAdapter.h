@@ -110,14 +110,15 @@ struct XBoxFFReport {
 
 enum XBoxReportId {
     /* Input Reports */
-    XBOX_INPUT_HOME = 0x02,
     XBOX_INPUT_STANDARD = 0x01,
+    XBOX_INPUT_HOME = 0x02,
+    XBOX_INPUT_BATTERY = 0x04,
     XBOX_INPUT_ANDROID = 0x07,
 };
 
 enum XBoxAdapterState {
     XBOX_CONNECTING = 0,
-    XBOX_SEND_FULL_REPORT_REQUEST,
+    XBOX_SEND_BATTERY_REQUEST,
     XBOX_CONNECTED
 };
 
@@ -125,8 +126,6 @@ enum XBoxAdapterState {
 
 class XBoxOneAdapter : public GamepadAdapter
 {
-    private :
-        XBox01Report mask;
     public :
         const char* getName() { return "X-Box One"; };
 
@@ -135,29 +134,19 @@ class XBoxOneAdapter : public GamepadAdapter
             return (classOfDevice == CLASS_OF_DEVICE_XBOX_ONE && (vendorId == XBOX_ONE_VENDOR_ID || vendorId == XBOX_ONE_VENDOR_ID_1) && (productId == XBOX_ONE_PRODUCT_ID || productId == XBOX_ONE_PRODUCT_ID_1));
         };
 
-        void setConfig(Config config) {
-            GamepadAdapter::setConfig(config);
-            // Setup mask according to config
-            memset(&mask,0x00,sizeof(mask));
-            // TODO
-        }
-
         void connectionComplete(Gamepad* gamepad)
         {   // Set player led
             GamepadAdapter::connectionComplete(gamepad);
-            // Request extended report if needed
-            if(!config.filterAccel)
-            {   // We need to delay sending the request
-                gamepad->adapterState = XBOX_SEND_FULL_REPORT_REQUEST;
-            }
+            // Request battery level
+            gamepad->adapterState = XBOX_SEND_BATTERY_REQUEST;
         };
 
 
         bool parseDataPacket(Gamepad* gamepad, uint8_t * packet, uint16_t packetSize)
         {
-            if(gamepad->adapterState == XBOX_SEND_FULL_REPORT_REQUEST)
-            {   // TODO
-                // requestFullReport(gamepad);
+            if(gamepad->adapterState == XBOX_SEND_BATTERY_REQUEST)
+            { 
+                requestBatteryReport(gamepad);
                 gamepad->adapterState = XBOX_CONNECTED;
             }
             if(packetSize >= 3)
@@ -234,6 +223,13 @@ class XBoxOneAdapter : public GamepadAdapter
                             return true;
                         }
                         break;
+                    case XBOX_INPUT_BATTERY :
+                        {   // Battery
+                            GamepadCommand* command = gamepad->getCommand();
+                            command->battery = packet[2];
+                            return true;
+                        }
+                        break;
                     default :
                         LOG_WARN("Switch Adapter packet : unsupported reportId 0x%02x\n",packet[0]);
 
@@ -265,6 +261,11 @@ class XBoxOneAdapter : public GamepadAdapter
             };
 
             gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,OUTPUT_REPORT_HEADER,XBOX_RUMBLE_REPORT_ID,(const uint8_t*)&ff, sizeof(ff));
+        }
+
+        void requestBatteryReport(Gamepad* gamepad)
+        {
+            gamepad->sendReport(Gamepad::ReportType::R_INTERRUPT,INPUT_REPORT_REQUEST_HEADER,XBOX_INPUT_BATTERY);
         }
 
 };

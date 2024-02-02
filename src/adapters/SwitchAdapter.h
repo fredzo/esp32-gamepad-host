@@ -278,6 +278,7 @@ class SwitchAdapter : public GamepadAdapter
             }
 
             // Update battery
+            // TODO : periodically send a sub-command to update battery level
             int battery = r->bat_con >> 5;
             gamepad->getCommand()->battery = battery;
             LOG_DEBUG("Switch adapter: battery level = %d.\n", battery);
